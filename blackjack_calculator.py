@@ -7,51 +7,76 @@ class BlackjackCalculator:
     Handles expected value, variance, and risk calculations.
     """
     
-    def __init__(self, num_decks, min_bet, max_bet, starting_bankroll, hands_per_hour):
+    def __init__(self, num_decks, starting_bankroll, hands_per_hour, betting_strategy):
         self.num_decks = num_decks
-        self.min_bet = min_bet
-        self.max_bet = max_bet
         self.starting_bankroll = starting_bankroll
         self.hands_per_hour = hands_per_hour
+        self.betting_strategy = betting_strategy
         
         # Standard blackjack statistics
         self.std_dev_per_hand = 1.15  # Standard deviation per unit bet
         
-        # True count frequency and betting strategy
-        self.count_data = {
-            # TC: [frequency, edge, bet_units]
-            'tc_neg': [0.60, -0.005, 1],  # TC ≤0: 60%, -0.5% edge, min bet
-            'tc_1': [0.20, 0.000, 1],     # TC +1: 20%, 0% edge, min bet  
-            'tc_2': [0.10, 0.005, 10],    # TC +2: 10%, +0.5% edge, max bet
-            'tc_3': [0.07, 0.010, 10],    # TC +3: 7%, +1.0% edge, max bet
-            'tc_4': [0.03, 0.015, 10]     # TC +4+: 3%, +1.5% edge, max bet
+        # True count frequency distribution (based on simulation studies)
+        self.count_frequencies = {
+            -5: 0.05, -4: 0.08, -3: 0.12, -2: 0.15, -1: 0.20,
+            0: 0.15, 1: 0.12, 2: 0.08, 3: 0.05, 4: 0.03, 5: 0.02
         }
+        
+        # Calculate edge based on true count (approximate)
+        self.count_edges = {}
+        for tc in range(-5, 6):
+            if tc <= 0:
+                self.count_edges[tc] = -0.005 + (tc * 0.001)  # Slightly worse for negative counts
+            else:
+                self.count_edges[tc] = tc * 0.005  # ~0.5% per true count
         
         # Calculate weighted average edge and bet
         self.edge = self._calculate_weighted_edge()
         self.avg_bet = self._calculate_average_bet()
     
+    def _get_bet_for_count(self, true_count):
+        """
+        Get the bet amount for a given true count based on betting strategy.
+        """
+        # Sort betting strategy by true count (descending) to find the right bet
+        sorted_strategy = sorted(self.betting_strategy, key=lambda x: x['true_count'], reverse=True)
+        
+        for bet_rule in sorted_strategy:
+            if true_count >= bet_rule['true_count']:
+                return bet_rule['bet_units']
+        
+        # If no rule matches, use the lowest bet
+        return min(rule['bet_units'] for rule in self.betting_strategy)
+    
     def _calculate_weighted_edge(self):
         """
-        Calculate weighted average edge based on true count frequencies.
+        Calculate weighted average edge based on true count frequencies and betting strategy.
         """
-        total_edge = 0
-        for tc_range, (frequency, edge, bet_units) in self.count_data.items():
-            total_edge += frequency * edge
-        return total_edge
+        total_weighted_edge = 0
+        total_frequency = 0
+        
+        for true_count, frequency in self.count_frequencies.items():
+            edge = self.count_edges[true_count]
+            bet_units = self._get_bet_for_count(true_count)
+            
+            # Weight the edge by frequency and bet size
+            weighted_edge = frequency * edge * bet_units
+            total_weighted_edge += weighted_edge
+            total_frequency += frequency * bet_units
+        
+        return total_weighted_edge / total_frequency if total_frequency > 0 else 0
     
     def _calculate_average_bet(self):
         """
         Calculate average bet size based on true count frequencies and betting strategy.
         """
-        total_bet = 0
-        for tc_range, (frequency, edge, bet_units) in self.count_data.items():
-            if bet_units == 1:
-                bet_size = self.min_bet
-            else:
-                bet_size = self.max_bet
-            total_bet += frequency * bet_size
-        return total_bet
+        total_weighted_bet = 0
+        
+        for true_count, frequency in self.count_frequencies.items():
+            bet_units = self._get_bet_for_count(true_count)
+            total_weighted_bet += frequency * bet_units
+        
+        return total_weighted_bet
     
     def calculate_hourly_ev(self):
         """Calculate expected value per hour."""
@@ -112,21 +137,11 @@ class BlackjackCalculator:
     
     def simulate_single_hand(self):
         """
-        Simulate a single hand outcome.
+        Simulate a single hand outcome using the betting strategy.
         Returns profit/loss for the hand.
         """
-        # Determine bet size (simplified - in reality depends on count)
-        bet_size = np.random.choice([self.min_bet, self.max_bet], 
-                                  p=[0.7, 0.3])  # More small bets than large
-        
-        # Simulate hand outcome
-        # Use normal distribution centered on expected value
-        outcome = np.random.normal(
-            loc=self.edge * bet_size,
-            scale=self.std_dev_per_hand * bet_size
-        )
-        
-        return outcome
+        # Use the more accurate count-based simulation
+        return self.simulate_hand_with_count()
     
     def simulate_hand_with_count(self):
         """
@@ -137,38 +152,41 @@ class BlackjackCalculator:
         rand = np.random.random()
         cumulative_freq = 0
         
-        selected_count = None
-        for tc_range, (frequency, edge, bet_units) in self.count_data.items():
-            cumulative_freq += frequency
+        selected_tc = None
+        for true_count in sorted(self.count_frequencies.keys()):
+            cumulative_freq += self.count_frequencies[true_count]
             if rand <= cumulative_freq:
-                selected_count = (frequency, edge, bet_units)
+                selected_tc = true_count
                 break
         
-        if selected_count is None:
-            selected_count = list(self.count_data.values())[-1]
+        if selected_tc is None:
+            selected_tc = 0  # Default to neutral count
         
-        frequency, edge, bet_units = selected_count
-        
-        # Determine bet size
-        bet_size = self.min_bet if bet_units == 1 else self.max_bet
+        # Get edge and bet for this count
+        edge = self.count_edges[selected_tc]
+        bet_units = self._get_bet_for_count(selected_tc)
         
         # Simulate hand outcome with this edge
         outcome = np.random.normal(
-            loc=edge * bet_size,
-            scale=self.std_dev_per_hand * bet_size
+            loc=edge * bet_units,
+            scale=self.std_dev_per_hand * bet_units
         )
         
         return outcome
     
     def get_simulation_parameters(self):
         """Return key parameters for display."""
+        min_bet = min(rule['bet_units'] for rule in self.betting_strategy)
+        max_bet = max(rule['bet_units'] for rule in self.betting_strategy)
+        
         return {
             'num_decks': self.num_decks,
-            'bet_spread': f"{self.min_bet}-{self.max_bet}",
+            'bet_spread': f"{min_bet}-{max_bet} units",
             'starting_bankroll': self.starting_bankroll,
             'calculated_edge': f"{self.edge*100:.3f}%",
             'hands_per_hour': self.hands_per_hour,
             'edge': self.edge,
             'avg_bet': self.avg_bet,
-            'std_dev_per_hand': self.std_dev_per_hand
+            'std_dev_per_hand': self.std_dev_per_hand,
+            'betting_strategy': self.betting_strategy
         }

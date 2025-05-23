@@ -29,24 +29,55 @@ def main():
         help="Standard casinos use 6-deck shoes"
     )
     
-    bet_spread_col1, bet_spread_col2 = st.sidebar.columns(2)
-    with bet_spread_col1:
-        min_bet = st.number_input(
-            "Min Bet (units)",
-            min_value=1,
-            max_value=10,
-            value=1,
-            step=1
-        )
+    # Betting Strategy Configuration
+    st.sidebar.subheader("Betting Strategy")
     
-    with bet_spread_col2:
-        max_bet = st.number_input(
-            "Max Bet (units)",
-            min_value=min_bet,
-            max_value=50,
-            value=12,
-            step=1
-        )
+    # Initialize session state for betting strategy
+    if 'betting_strategy' not in st.session_state:
+        st.session_state.betting_strategy = [
+            {'true_count': 0, 'bet_units': 1},
+            {'true_count': 2, 'bet_units': 10}
+        ]
+    
+    # Display current betting strategy
+    for i, bet_rule in enumerate(st.session_state.betting_strategy):
+        col1, col2, col3 = st.sidebar.columns([2, 2, 1])
+        
+        with col1:
+            tc = st.number_input(
+                f"True Count {i+1}",
+                min_value=-5,
+                max_value=10,
+                value=bet_rule['true_count'],
+                step=1,
+                key=f"tc_{i}"
+            )
+            st.session_state.betting_strategy[i]['true_count'] = tc
+        
+        with col2:
+            bet = st.number_input(
+                f"Bet Units {i+1}",
+                min_value=1,
+                max_value=100,
+                value=bet_rule['bet_units'],
+                step=1,
+                key=f"bet_{i}"
+            )
+            st.session_state.betting_strategy[i]['bet_units'] = bet
+        
+        with col3:
+            if i > 1:  # Allow removal only if more than 2 entries
+                if st.button("🗑️", key=f"remove_{i}", help="Remove this bet level"):
+                    st.session_state.betting_strategy.pop(i)
+                    st.rerun()
+    
+    # Add new betting level
+    if st.sidebar.button("➕ Add Bet Level"):
+        st.session_state.betting_strategy.append({'true_count': 3, 'bet_units': 20})
+        st.rerun()
+    
+    # Sort betting strategy by true count
+    st.session_state.betting_strategy.sort(key=lambda x: x['true_count'])
     
     starting_bankroll = st.sidebar.number_input(
         "Starting Bankroll ($)",
@@ -81,25 +112,30 @@ def main():
     
     # Calculate button
     if st.sidebar.button("Run Simulation", type="primary"):
-        # Validate inputs
-        if max_bet < min_bet:
-            st.error("Maximum bet must be greater than or equal to minimum bet")
+        # Validate betting strategy
+        if len(st.session_state.betting_strategy) < 2:
+            st.error("Please define at least 2 betting levels")
             return
         
         # Initialize calculator
         calculator = BlackjackCalculator(
             num_decks=num_decks,
-            min_bet=min_bet,
-            max_bet=max_bet,
             starting_bankroll=starting_bankroll,
-            hands_per_hour=hands_per_hour
+            hands_per_hour=hands_per_hour,
+            betting_strategy=st.session_state.betting_strategy
         )
         
         # Display calculation results
         st.header("📊 Simulation Results")
         
-        # Show calculated edge based on count frequencies
-        st.info(f"**Calculated Edge**: {calculator.edge*100:.3f}% (based on true count frequencies)")
+        # Show calculated edge and betting strategy summary
+        st.info(f"**Calculated Edge**: {calculator.edge*100:.3f}% (weighted by bet size and count frequencies)")
+        
+        # Show betting strategy
+        strategy_text = "**Your Betting Strategy**: "
+        for rule in sorted(st.session_state.betting_strategy, key=lambda x: x['true_count']):
+            strategy_text += f"TC {rule['true_count']}+ → {rule['bet_units']} units, "
+        st.write(strategy_text.rstrip(", "))
         
         # Basic statistics
         col1, col2, col3 = st.columns(3)
