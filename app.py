@@ -45,12 +45,12 @@ def main():
     for tc in range(-3, 7):  # TC from -3 to +6
         bet_units = st.sidebar.number_input(
             f"TC {tc:+d}",
-            min_value=1,
+            min_value=0,
             max_value=100,
             value=st.session_state.bet_units[tc],
             step=1,
             key=f"bet_tc_{tc}",
-            help=f"Bet units when true count is {tc}"
+            help=f"Bet units when true count is {tc} (0 = sit out)"
         )
         st.session_state.bet_units[tc] = bet_units
         betting_strategy.append({'true_count': tc, 'bet_units': bet_units})
