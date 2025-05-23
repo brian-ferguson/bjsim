@@ -31,8 +31,8 @@ class MonteCarloSimulation:
                     # Ruin occurred
                     break
                 
-                # Simulate single hand
-                hand_result = self.calculator.simulate_single_hand()
+                # Simulate single hand with realistic count distribution
+                hand_result = self.calculator.simulate_hand_with_count()
                 bankroll += hand_result
                 hands_played += 1
             

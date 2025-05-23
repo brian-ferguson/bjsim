@@ -7,33 +7,51 @@ class BlackjackCalculator:
     Handles expected value, variance, and risk calculations.
     """
     
-    def __init__(self, num_decks, min_bet, max_bet, starting_bankroll, 
-                 win_rate_percent, hands_per_hour):
+    def __init__(self, num_decks, min_bet, max_bet, starting_bankroll, hands_per_hour):
         self.num_decks = num_decks
         self.min_bet = min_bet
         self.max_bet = max_bet
         self.starting_bankroll = starting_bankroll
-        self.win_rate_percent = win_rate_percent
         self.hands_per_hour = hands_per_hour
         
         # Standard blackjack statistics
-        self.base_house_edge = 0.005  # 0.5% house edge for basic strategy
         self.std_dev_per_hand = 1.15  # Standard deviation per unit bet
         
-        # Calculate effective edge
-        self.edge = (win_rate_percent / 100) - self.base_house_edge
+        # True count frequency and betting strategy
+        self.count_data = {
+            # TC: [frequency, edge, bet_units]
+            'tc_neg': [0.60, -0.005, 1],  # TC ≤0: 60%, -0.5% edge, min bet
+            'tc_1': [0.20, 0.000, 1],     # TC +1: 20%, 0% edge, min bet  
+            'tc_2': [0.10, 0.005, 10],    # TC +2: 10%, +0.5% edge, max bet
+            'tc_3': [0.07, 0.010, 10],    # TC +3: 7%, +1.0% edge, max bet
+            'tc_4': [0.03, 0.015, 10]     # TC +4+: 3%, +1.5% edge, max bet
+        }
         
-        # Average bet calculation (simplified model)
+        # Calculate weighted average edge and bet
+        self.edge = self._calculate_weighted_edge()
         self.avg_bet = self._calculate_average_bet()
+    
+    def _calculate_weighted_edge(self):
+        """
+        Calculate weighted average edge based on true count frequencies.
+        """
+        total_edge = 0
+        for tc_range, (frequency, edge, bet_units) in self.count_data.items():
+            total_edge += frequency * edge
+        return total_edge
     
     def _calculate_average_bet(self):
         """
-        Calculate average bet size based on spread.
-        Assumes a simple linear progression based on count.
+        Calculate average bet size based on true count frequencies and betting strategy.
         """
-        # Simplified model: assume even distribution across bet range
-        # In reality, this would depend on the specific counting system
-        return (self.min_bet + self.max_bet) / 2
+        total_bet = 0
+        for tc_range, (frequency, edge, bet_units) in self.count_data.items():
+            if bet_units == 1:
+                bet_size = self.min_bet
+            else:
+                bet_size = self.max_bet
+            total_bet += frequency * bet_size
+        return total_bet
     
     def calculate_hourly_ev(self):
         """Calculate expected value per hour."""
@@ -110,13 +128,45 @@ class BlackjackCalculator:
         
         return outcome
     
+    def simulate_hand_with_count(self):
+        """
+        Simulate a single hand with realistic true count distribution.
+        Returns profit/loss for the hand based on count frequencies.
+        """
+        # Randomly select true count based on frequencies
+        rand = np.random.random()
+        cumulative_freq = 0
+        
+        selected_count = None
+        for tc_range, (frequency, edge, bet_units) in self.count_data.items():
+            cumulative_freq += frequency
+            if rand <= cumulative_freq:
+                selected_count = (frequency, edge, bet_units)
+                break
+        
+        if selected_count is None:
+            selected_count = list(self.count_data.values())[-1]
+        
+        frequency, edge, bet_units = selected_count
+        
+        # Determine bet size
+        bet_size = self.min_bet if bet_units == 1 else self.max_bet
+        
+        # Simulate hand outcome with this edge
+        outcome = np.random.normal(
+            loc=edge * bet_size,
+            scale=self.std_dev_per_hand * bet_size
+        )
+        
+        return outcome
+    
     def get_simulation_parameters(self):
         """Return key parameters for display."""
         return {
             'num_decks': self.num_decks,
             'bet_spread': f"{self.min_bet}-{self.max_bet}",
             'starting_bankroll': self.starting_bankroll,
-            'win_rate_percent': self.win_rate_percent,
+            'calculated_edge': f"{self.edge*100:.3f}%",
             'hands_per_hour': self.hands_per_hour,
             'edge': self.edge,
             'avg_bet': self.avg_bet,

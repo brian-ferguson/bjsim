@@ -66,14 +66,7 @@ def main():
         help="Total hours of play to simulate"
     )
     
-    win_rate = st.sidebar.slider(
-        "Win Rate per 100 hands (%)",
-        min_value=0.1,
-        max_value=3.0,
-        value=1.0,
-        step=0.1,
-        help="Expected advantage based on counting system and conditions"
-    )
+
     
     hands_per_hour = st.sidebar.number_input(
         "Hands per Hour",
@@ -84,14 +77,7 @@ def main():
         help="100 for solo play, 250+ for team play"
     )
     
-    monte_carlo_runs = st.sidebar.number_input(
-        "Monte Carlo Runs",
-        min_value=100,
-        max_value=10000,
-        value=1000,
-        step=100,
-        help="Number of simulations to run for variance analysis"
-    )
+
     
     # Calculate button
     if st.sidebar.button("Run Simulation", type="primary"):
@@ -106,40 +92,30 @@ def main():
             min_bet=min_bet,
             max_bet=max_bet,
             starting_bankroll=starting_bankroll,
-            win_rate_percent=win_rate,
             hands_per_hour=hands_per_hour
         )
         
-        # Display basic calculations
+        # Display calculation results
         st.header("📊 Simulation Results")
         
+        # Show calculated edge based on count frequencies
+        st.info(f"**Calculated Edge**: {calculator.edge*100:.3f}% (based on true count frequencies)")
+        
         # Basic statistics
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         
         total_hands = hours_played * hands_per_hour
         hourly_ev = calculator.calculate_hourly_ev()
         total_ev = hourly_ev * hours_played
-        risk_of_ruin = calculator.calculate_risk_of_ruin(hours_played)
         
         with col1:
-            st.metric("Total Expected Value", f"${total_ev:.2f}")
-        
-        with col2:
             st.metric("Hourly Expected Value", f"${hourly_ev:.2f}")
         
+        with col2:
+            st.metric("Total Expected Value", f"${total_ev:.2f}")
+        
         with col3:
-            st.metric("Risk of Ruin", f"{risk_of_ruin:.2f}%")
-        
-        with col4:
             st.metric("Total Hands", f"{total_hands:,}")
-        
-        # Monte Carlo simulation
-        with st.spinner("Running Monte Carlo simulation..."):
-            simulation = MonteCarloSimulation(calculator)
-            simulation_results = simulation.run_simulation(
-                hours_played=hours_played,
-                num_runs=monte_carlo_runs
-            )
         
         # Visualizations
         visualizer = Visualizer()
@@ -151,71 +127,27 @@ def main():
         )
         st.plotly_chart(ev_fig, use_container_width=True)
         
-        # Monte Carlo results
-        st.subheader("Monte Carlo Simulation Results")
+        # Run a single randomized simulation
+        st.subheader("Randomized Simulation (Single Run)")
+        with st.spinner("Running randomized simulation..."):
+            simulation = MonteCarloSimulation(calculator)
+            single_result = simulation.run_single_simulation(hours_played)
+        
+        # Display actual vs expected results
+        actual_profit = single_result['final_bankroll'] - starting_bankroll
         
         col1, col2 = st.columns(2)
-        
         with col1:
-            bankroll_fig = visualizer.plot_bankroll_distribution(simulation_results)
-            st.plotly_chart(bankroll_fig, use_container_width=True)
-        
+            st.metric("Expected Profit", f"${total_ev:.2f}")
         with col2:
-            trajectory_fig = visualizer.plot_sample_trajectories(
-                simulation_results, hours_played, num_samples=10
-            )
-            st.plotly_chart(trajectory_fig, use_container_width=True)
+            st.metric("Actual Profit (Random)", f"${actual_profit:.2f}", 
+                     delta=f"${actual_profit - total_ev:.2f}")
         
-        # Detailed statistics
-        st.subheader("Detailed Statistics")
-        
-        final_bankrolls = simulation_results['final_bankrolls']
-        profits = final_bankrolls - starting_bankroll
-        
-        stats_col1, stats_col2 = st.columns(2)
-        
-        with stats_col1:
-            st.write("**Profit/Loss Statistics:**")
-            st.write(f"- Average Profit: ${np.mean(profits):.2f}")
-            st.write(f"- Median Profit: ${np.median(profits):.2f}")
-            st.write(f"- Standard Deviation: ${np.std(profits):.2f}")
-            st.write(f"- 95% Confidence Interval: ${np.percentile(profits, 2.5):.2f} to ${np.percentile(profits, 97.5):.2f}")
-        
-        with stats_col2:
-            st.write("**Probability Analysis:**")
-            prob_profit = (profits > 0).mean() * 100
-            prob_double = (final_bankrolls >= 2 * starting_bankroll).mean() * 100
-            prob_ruin = (final_bankrolls <= 0).mean() * 100
-            
-            st.write(f"- Probability of Profit: {prob_profit:.1f}%")
-            st.write(f"- Probability of Doubling Bankroll: {prob_double:.1f}%")
-            st.write(f"- Probability of Ruin (Simulation): {prob_ruin:.1f}%")
-        
-        # Risk analysis
-        st.subheader("Risk Analysis")
-        
-        # Calculate additional risk metrics
-        drawdown_analysis = visualizer.analyze_drawdowns(simulation_results['trajectories'])
-        
-        risk_col1, risk_col2 = st.columns(2)
-        
-        with risk_col1:
-            st.write("**Drawdown Analysis:**")
-            st.write(f"- Average Maximum Drawdown: ${drawdown_analysis['avg_max_drawdown']:.2f}")
-            st.write(f"- 95th Percentile Drawdown: ${drawdown_analysis['p95_drawdown']:.2f}")
-            st.write(f"- Worst Case Drawdown: ${drawdown_analysis['worst_drawdown']:.2f}")
-        
-        with risk_col2:
-            st.write("**Bankroll Requirements:**")
-            recommended_bankroll = calculator.calculate_recommended_bankroll()
-            current_adequacy = (starting_bankroll / recommended_bankroll) * 100
-            
-            st.write(f"- Recommended Bankroll: ${recommended_bankroll:.2f}")
-            st.write(f"- Current Adequacy: {current_adequacy:.1f}%")
-            if current_adequacy < 100:
-                st.warning("⚠️ Your bankroll may be insufficient for this spread")
-            else:
-                st.success("✅ Your bankroll appears adequate")
+        # Plot the actual trajectory vs expected
+        trajectory_fig = visualizer.plot_single_trajectory_vs_expected(
+            single_result['trajectory'], hours_played, hourly_ev, starting_bankroll
+        )
+        st.plotly_chart(trajectory_fig, use_container_width=True)
 
     # Information section
     st.sidebar.markdown("---")
