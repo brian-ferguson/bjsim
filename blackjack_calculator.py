@@ -17,14 +17,15 @@ class BlackjackCalculator:
         self.std_dev_per_hand = 1.15  # Standard deviation per unit bet
         
         # True count frequency distribution (based on simulation studies)
+        # Extended range from -3 to +6 to match betting strategy
         self.count_frequencies = {
-            -5: 0.05, -4: 0.08, -3: 0.12, -2: 0.15, -1: 0.20,
-            0: 0.15, 1: 0.12, 2: 0.08, 3: 0.05, 4: 0.03, 5: 0.02
+            -3: 0.15, -2: 0.18, -1: 0.22, 0: 0.20, 1: 0.12,
+            2: 0.08, 3: 0.03, 4: 0.015, 5: 0.005, 6: 0.0025
         }
         
         # Calculate edge based on true count (approximate)
         self.count_edges = {}
-        for tc in range(-5, 6):
+        for tc in range(-3, 7):  # TC from -3 to +6
             if tc <= 0:
                 self.count_edges[tc] = -0.005 + (tc * 0.001)  # Slightly worse for negative counts
             else:

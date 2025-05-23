@@ -30,54 +30,33 @@ def main():
     )
     
     # Betting Strategy Configuration
-    st.sidebar.subheader("Betting Strategy")
+    st.sidebar.subheader("Betting Strategy (Units)")
+    st.sidebar.write("Set your bet for each true count:")
     
-    # Initialize session state for betting strategy
-    if 'betting_strategy' not in st.session_state:
-        st.session_state.betting_strategy = [
-            {'true_count': 0, 'bet_units': 1},
-            {'true_count': 2, 'bet_units': 10}
-        ]
+    # Initialize session state for betting strategy with TC -3 to +6
+    if 'bet_units' not in st.session_state:
+        st.session_state.bet_units = {
+            -3: 1, -2: 1, -1: 1, 0: 1, 1: 1,
+            2: 5, 3: 10, 4: 15, 5: 20, 6: 25
+        }
     
-    # Display current betting strategy
-    for i, bet_rule in enumerate(st.session_state.betting_strategy):
-        col1, col2, col3 = st.sidebar.columns([2, 2, 1])
-        
-        with col1:
-            tc = st.number_input(
-                f"True Count {i+1}",
-                min_value=-5,
-                max_value=10,
-                value=bet_rule['true_count'],
-                step=1,
-                key=f"tc_{i}"
-            )
-            st.session_state.betting_strategy[i]['true_count'] = tc
-        
-        with col2:
-            bet = st.number_input(
-                f"Bet Units {i+1}",
-                min_value=1,
-                max_value=100,
-                value=bet_rule['bet_units'],
-                step=1,
-                key=f"bet_{i}"
-            )
-            st.session_state.betting_strategy[i]['bet_units'] = bet
-        
-        with col3:
-            if i > 1:  # Allow removal only if more than 2 entries
-                if st.button("🗑️", key=f"remove_{i}", help="Remove this bet level"):
-                    st.session_state.betting_strategy.pop(i)
-                    st.rerun()
+    # Create betting strategy inputs for each true count
+    betting_strategy = []
+    for tc in range(-3, 7):  # TC from -3 to +6
+        bet_units = st.sidebar.number_input(
+            f"TC {tc:+d}",
+            min_value=1,
+            max_value=100,
+            value=st.session_state.bet_units[tc],
+            step=1,
+            key=f"bet_tc_{tc}",
+            help=f"Bet units when true count is {tc}"
+        )
+        st.session_state.bet_units[tc] = bet_units
+        betting_strategy.append({'true_count': tc, 'bet_units': bet_units})
     
-    # Add new betting level
-    if st.sidebar.button("➕ Add Bet Level"):
-        st.session_state.betting_strategy.append({'true_count': 3, 'bet_units': 20})
-        st.rerun()
-    
-    # Sort betting strategy by true count
-    st.session_state.betting_strategy.sort(key=lambda x: x['true_count'])
+    # Store the betting strategy for the calculator
+    st.session_state.betting_strategy = betting_strategy
     
     starting_bankroll = st.sidebar.number_input(
         "Starting Bankroll ($)",
@@ -187,19 +166,21 @@ def main():
 
     # Information section
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 True Count Frequencies")
+    st.sidebar.markdown("### 📊 True Count Edge Calculation")
     st.sidebar.markdown("""
-    **Automatic Edge Calculation Based On:**
-    - TC ≤0: 60% frequency, -0.5% edge, min bet
-    - TC +1: 20% frequency, 0% edge, min bet  
-    - TC +2: 10% frequency, +0.5% edge, max bet
-    - TC +3: 7% frequency, +1.0% edge, max bet
-    - TC +4+: 3% frequency, +1.5% edge, max bet
+    **Edge per True Count:**
+    - Negative TC: -0.5% + (TC × 0.1%)
+    - Positive TC: TC × 0.5%
+    
+    **Frequencies Used:**
+    - TC -3: 15%, TC -2: 18%, TC -1: 22%
+    - TC 0: 20%, TC +1: 12%, TC +2: 8%
+    - TC +3: 3%, TC +4: 1.5%, TC +5: 0.5%, TC +6: 0.25%
     """)
     
     st.sidebar.markdown("### 📖 About This Tool")
     st.sidebar.markdown("""
-    This simulation shows expected value over time and compares it with a randomized single simulation to demonstrate variance.
+    Set your betting strategy for each true count from -3 to +6. The tool calculates your expected value based on realistic count frequencies and edge estimates.
     
     **Note**: This tool is for educational purposes only.
     """)
