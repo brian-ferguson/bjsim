@@ -64,9 +64,10 @@ class MonteCarloSimulation:
             result = self.run_single_simulation(hours_played)
             results.append(result)
             
-            # Update progress bar if provided
-            if progress_bar is not None and (i + 1) % max(1, num_runs // 100) == 0:
-                progress_bar.progress((i + 1) / num_runs)
+            # Update progress bar if provided (update every 50 runs for smoother progress)
+            if progress_bar is not None and (i + 1) % max(1, num_runs // 200) == 0:
+                progress_percentage = (i + 1) / num_runs
+                progress_bar.progress(progress_percentage)
         
         # Aggregate results
         final_bankrolls = [r['final_bankroll'] for r in results]

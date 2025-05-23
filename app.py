@@ -149,18 +149,62 @@ def main():
         # Run comprehensive Monte Carlo analysis
         st.subheader("Monte Carlo Analysis (10,000 Runs)")
         
-        # Create progress bar
+        # Create progress bar with text
         progress_bar = st.progress(0)
         status_text = st.empty()
-        status_text.text("Starting simulation...")
+        status_text.text("Starting simulation... 0% complete")
+        
+        # Custom progress callback to update both bar and text
+        def update_progress(current, total):
+            percentage = current / total
+            progress_bar.progress(percentage)
+            status_text.text(f"Running simulation... {percentage*100:.0f}% complete ({current:,} / {total:,} runs)")
         
         simulation = MonteCarloSimulation(calculator)
-        monte_carlo_results = simulation.run_simulation(hours_played, num_runs=10000, progress_bar=progress_bar)
+        
+        # Modified simulation call with custom progress updates
+        results = []
+        num_runs = 10000
+        
+        for i in range(num_runs):
+            result = simulation.run_single_simulation(hours_played)
+            results.append(result)
+            
+            # Update progress every 50 runs
+            if (i + 1) % 50 == 0 or i == num_runs - 1:
+                update_progress(i + 1, num_runs)
+        
+        # Process results like the original run_simulation method
+        final_bankrolls = [r['final_bankroll'] for r in results]
+        trajectories = [r['trajectory'] for r in results]
+        max_bankrolls = [r['max_bankroll'] for r in results]
+        min_bankrolls = [r['min_bankroll'] for r in results]
+        
+        profits = [fb - starting_bankroll for fb in final_bankrolls]
+        
+        monte_carlo_results = {
+            'final_bankrolls': np.array(final_bankrolls),
+            'trajectories': trajectories,
+            'profits': np.array(profits),
+            'max_bankrolls': np.array(max_bankrolls),
+            'min_bankrolls': np.array(min_bankrolls),
+            'statistics': {
+                'mean_profit': np.mean(profits),
+                'median_profit': np.median(profits),
+                'std_profit': np.std(profits),
+                'min_profit': np.min(profits),
+                'max_profit': np.max(profits),
+                'prob_profit': np.mean(np.array(profits) > 0),
+                'prob_ruin': np.mean(np.array(final_bankrolls) <= 0),
+                'prob_double': np.mean(np.array(final_bankrolls) >= 2 * starting_bankroll)
+            }
+        }
+        
         single_result = simulation.run_single_simulation(hours_played)
         
         # Clear progress indicators
         progress_bar.empty()
-        status_text.text("Simulation complete! ✅")
+        status_text.text("✅ Simulation complete!")
         
         # Monte Carlo Results Analysis
         final_bankrolls = monte_carlo_results['final_bankrolls']
