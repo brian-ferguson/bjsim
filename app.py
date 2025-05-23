@@ -146,13 +146,85 @@ def main():
         )
         st.plotly_chart(ev_fig, use_container_width=True)
         
-        # Run a single randomized simulation
-        st.subheader("Randomized Simulation (Single Run)")
-        with st.spinner("Running randomized simulation..."):
+        # Run comprehensive Monte Carlo analysis
+        st.subheader("Monte Carlo Analysis (10,000 Runs)")
+        with st.spinner("Running 10,000 simulations... This may take a moment."):
             simulation = MonteCarloSimulation(calculator)
+            monte_carlo_results = simulation.run_simulation(hours_played, num_runs=10000)
             single_result = simulation.run_single_simulation(hours_played)
         
-        # Display actual vs expected results
+        # Monte Carlo Results Analysis
+        final_bankrolls = monte_carlo_results['final_bankrolls']
+        profits = monte_carlo_results['profits']
+        
+        # Statistical Analysis
+        st.subheader("Statistical Analysis (10,000 Simulations)")
+        
+        # Display key statistics
+        mean_profit = np.mean(profits)
+        std_profit = np.std(profits)
+        confidence_interval_lower = mean_profit - 1.96 * std_profit
+        confidence_interval_upper = mean_profit + 1.96 * std_profit
+        
+        stat_col1, stat_col2, stat_col3 = st.columns(3)
+        with stat_col1:
+            st.metric("Mean Profit", f"${mean_profit:.2f}")
+        with stat_col2:
+            st.metric("Standard Deviation", f"${std_profit:.2f}")
+        with stat_col3:
+            st.metric("95% Confidence Interval", f"${confidence_interval_lower:.0f} to ${confidence_interval_upper:.0f}")
+        
+        # Histogram of final bankrolls
+        st.subheader("Distribution of Final Bankrolls")
+        bankroll_fig = visualizer.plot_bankroll_distribution(monte_carlo_results)
+        st.plotly_chart(bankroll_fig, use_container_width=True)
+        
+        # Risk of Ruin for different bankrolls
+        st.subheader("Risk of Ruin Analysis")
+        
+        # Calculate RoR for different bankroll percentages
+        ror_data = []
+        bankroll_percentages = [50, 75, 100, 125, 150]
+        recommended_bankroll = calculator.calculate_recommended_bankroll()
+        
+        for pct in bankroll_percentages:
+            test_bankroll = (recommended_bankroll * pct / 100) if recommended_bankroll != float('inf') else starting_bankroll * pct / 100
+            # Create temporary calculator with different bankroll
+            temp_calculator = BlackjackCalculator(
+                num_decks=num_decks,
+                starting_bankroll=test_bankroll,
+                hands_per_hour=hands_per_hour,
+                betting_strategy=st.session_state.betting_strategy
+            )
+            temp_ror = temp_calculator.calculate_risk_of_ruin(hours_played)
+            ror_data.append({"Bankroll Size": f"{pct}% of recommended", "Risk of Ruin": f"{temp_ror:.1f}%"})
+        
+        # Display RoR table
+        ror_df = pd.DataFrame(ror_data)
+        st.table(ror_df)
+        
+        # Calculate N₀ (hands to be 1 SD above breakeven)
+        st.subheader("N₀ Analysis (Hands to 1 SD Above Breakeven)")
+        
+        ev_per_hand = calculator.calculate_hourly_ev() / calculator.hands_per_hour
+        variance_per_hand = (calculator.calculate_hourly_std() / calculator.hands_per_hour) ** 2
+        
+        if ev_per_hand > 0:
+            n0_hands = variance_per_hand / (ev_per_hand ** 2)
+            n0_hours = n0_hands / calculator.hands_per_hour
+            
+            n0_col1, n0_col2 = st.columns(2)
+            with n0_col1:
+                st.metric("N₀ (Hands)", f"{n0_hands:,.0f}")
+            with n0_col2:
+                st.metric("N₀ (Hours)", f"{n0_hours:.1f}")
+            
+            st.info(f"After {n0_hands:,.0f} hands ({n0_hours:.1f} hours), your expected profit will equal one standard deviation of variance. This is when skill begins to significantly outweigh luck.")
+        else:
+            st.error("Negative edge detected - N₀ calculation not applicable")
+        
+        # Single simulation comparison
+        st.subheader("Single Simulation Example")
         actual_profit = single_result['final_bankroll'] - starting_bankroll
         
         col1, col2 = st.columns(2)
@@ -162,26 +234,25 @@ def main():
             st.metric("Actual Profit (Random)", f"${actual_profit:.2f}", 
                      delta=f"${actual_profit - total_ev:.2f}")
         
-        # Risk analysis section
-        st.subheader("Risk Analysis")
-        recommended_bankroll = calculator.calculate_recommended_bankroll()
-        bankroll_adequacy = (starting_bankroll / recommended_bankroll) * 100 if recommended_bankroll != float('inf') else 100
+        # Additional risk analysis
+        st.subheader("Bankroll Recommendations")
         
         risk_col1, risk_col2 = st.columns(2)
         with risk_col1:
-            st.write("**Risk of Ruin Analysis:**")
-            st.write(f"- Current Risk of Ruin: {risk_of_ruin:.2f}%")
+            st.write("**Current Strategy Risk:**")
+            st.write(f"- Risk of Ruin: {risk_of_ruin:.2f}%")
             if risk_of_ruin > 10:
-                st.warning("⚠️ High risk of ruin - consider larger bankroll or smaller bets")
+                st.warning("⚠️ High risk - consider larger bankroll or smaller bets")
             elif risk_of_ruin > 5:
                 st.warning("⚠️ Moderate risk - monitor bankroll carefully")
             else:
                 st.success("✅ Low risk of ruin")
         
         with risk_col2:
-            st.write("**Bankroll Recommendations:**")
+            st.write("**Bankroll Adequacy:**")
             if recommended_bankroll != float('inf'):
-                st.write(f"- Recommended Bankroll: ${recommended_bankroll:.2f}")
+                bankroll_adequacy = (starting_bankroll / recommended_bankroll) * 100
+                st.write(f"- Recommended: ${recommended_bankroll:.2f}")
                 st.write(f"- Current Adequacy: {bankroll_adequacy:.1f}%")
                 if bankroll_adequacy < 100:
                     st.warning("⚠️ Consider increasing bankroll")
