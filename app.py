@@ -151,13 +151,19 @@ def main():
 
     # Information section
     st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 True Count Frequencies")
+    st.sidebar.markdown("""
+    **Automatic Edge Calculation Based On:**
+    - TC ≤0: 60% frequency, -0.5% edge, min bet
+    - TC +1: 20% frequency, 0% edge, min bet  
+    - TC +2: 10% frequency, +0.5% edge, max bet
+    - TC +3: 7% frequency, +1.0% edge, max bet
+    - TC +4+: 3% frequency, +1.5% edge, max bet
+    """)
+    
     st.sidebar.markdown("### 📖 About This Tool")
     st.sidebar.markdown("""
-    This simulation helps card counters understand:
-    - **Expected Value**: Long-term profit expectations
-    - **Variance**: Natural fluctuations in results
-    - **Risk of Ruin**: Probability of losing entire bankroll
-    - **Bankroll Requirements**: Recommended starting capital
+    This simulation shows expected value over time and compares it with a randomized single simulation to demonstrate variance.
     
     **Note**: This tool is for educational purposes only.
     """)
