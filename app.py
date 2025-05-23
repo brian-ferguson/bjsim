@@ -117,11 +117,12 @@ def main():
         st.write(strategy_text.rstrip(", "))
         
         # Basic statistics
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         
         total_hands = hours_played * hands_per_hour
         hourly_ev = calculator.calculate_hourly_ev()
         total_ev = hourly_ev * hours_played
+        risk_of_ruin = calculator.calculate_risk_of_ruin(hours_played)
         
         with col1:
             st.metric("Hourly Expected Value", f"${hourly_ev:.2f}")
@@ -130,6 +131,9 @@ def main():
             st.metric("Total Expected Value", f"${total_ev:.2f}")
         
         with col3:
+            st.metric("Risk of Ruin", f"{risk_of_ruin:.2f}%")
+        
+        with col4:
             st.metric("Total Hands", f"{total_hands:,}")
         
         # Visualizations
@@ -157,6 +161,34 @@ def main():
         with col2:
             st.metric("Actual Profit (Random)", f"${actual_profit:.2f}", 
                      delta=f"${actual_profit - total_ev:.2f}")
+        
+        # Risk analysis section
+        st.subheader("Risk Analysis")
+        recommended_bankroll = calculator.calculate_recommended_bankroll()
+        bankroll_adequacy = (starting_bankroll / recommended_bankroll) * 100 if recommended_bankroll != float('inf') else 100
+        
+        risk_col1, risk_col2 = st.columns(2)
+        with risk_col1:
+            st.write("**Risk of Ruin Analysis:**")
+            st.write(f"- Current Risk of Ruin: {risk_of_ruin:.2f}%")
+            if risk_of_ruin > 10:
+                st.warning("⚠️ High risk of ruin - consider larger bankroll or smaller bets")
+            elif risk_of_ruin > 5:
+                st.warning("⚠️ Moderate risk - monitor bankroll carefully")
+            else:
+                st.success("✅ Low risk of ruin")
+        
+        with risk_col2:
+            st.write("**Bankroll Recommendations:**")
+            if recommended_bankroll != float('inf'):
+                st.write(f"- Recommended Bankroll: ${recommended_bankroll:.2f}")
+                st.write(f"- Current Adequacy: {bankroll_adequacy:.1f}%")
+                if bankroll_adequacy < 100:
+                    st.warning("⚠️ Consider increasing bankroll")
+                else:
+                    st.success("✅ Bankroll appears adequate")
+            else:
+                st.error("⚠️ Negative edge - not recommended")
         
         # Plot the actual trajectory vs expected
         trajectory_fig = visualizer.plot_single_trajectory_vs_expected(
