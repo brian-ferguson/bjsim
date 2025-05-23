@@ -148,10 +148,19 @@ def main():
         
         # Run comprehensive Monte Carlo analysis
         st.subheader("Monte Carlo Analysis (10,000 Runs)")
-        with st.spinner("Running 10,000 simulations... This may take a moment."):
-            simulation = MonteCarloSimulation(calculator)
-            monte_carlo_results = simulation.run_simulation(hours_played, num_runs=10000)
-            single_result = simulation.run_single_simulation(hours_played)
+        
+        # Create progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        status_text.text("Starting simulation...")
+        
+        simulation = MonteCarloSimulation(calculator)
+        monte_carlo_results = simulation.run_simulation(hours_played, num_runs=10000, progress_bar=progress_bar)
+        single_result = simulation.run_single_simulation(hours_played)
+        
+        # Clear progress indicators
+        progress_bar.empty()
+        status_text.text("Simulation complete! ✅")
         
         # Monte Carlo Results Analysis
         final_bankrolls = monte_carlo_results['final_bankrolls']

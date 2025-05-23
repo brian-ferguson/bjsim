@@ -52,17 +52,21 @@ class MonteCarloSimulation:
             'min_bankroll': min(bankroll_trajectory)
         }
     
-    def run_simulation(self, hours_played: int, num_runs: int = 1000) -> Dict:
+    def run_simulation(self, hours_played: int, num_runs: int = 1000, progress_bar=None) -> Dict:
         """
         Run multiple Monte Carlo simulations.
         Returns aggregated results for analysis.
         """
         results = []
         
-        # Run simulations (can be parallelized for better performance)
-        for _ in range(num_runs):
+        # Run simulations with progress tracking
+        for i in range(num_runs):
             result = self.run_single_simulation(hours_played)
             results.append(result)
+            
+            # Update progress bar if provided
+            if progress_bar is not None and (i + 1) % max(1, num_runs // 100) == 0:
+                progress_bar.progress((i + 1) / num_runs)
         
         # Aggregate results
         final_bankrolls = [r['final_bankroll'] for r in results]
