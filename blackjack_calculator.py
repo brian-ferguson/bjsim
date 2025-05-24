@@ -112,24 +112,30 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using the correct formula for advantage play.
-        RoR = exp(-2 * edge * bankroll / variance_per_hand)
+        Calculate risk of ruin using the correct formula for dollar-based betting.
+        Uses Kelly Criterion approach for accurate risk assessment.
         """
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Calculate hourly variance
-        hourly_variance = self.calculate_hourly_variance()
+        # Calculate average bet size (in dollars)
+        avg_bet_dollars = self._calculate_average_bet()
         
-        # Calculate variance per hand
-        variance_per_hand = hourly_variance / self.hands_per_hour
+        # Convert edge to edge per dollar bet
+        edge_per_dollar = self.edge / avg_bet_dollars if avg_bet_dollars > 0 else 0
         
-        # Standard RoR formula: exp(-2 * edge * bankroll / variance_per_hand)
-        if variance_per_hand > 0:
-            exponent = -2 * self.edge * self.starting_bankroll / variance_per_hand
+        # Calculate variance per dollar bet (standard deviation squared)
+        variance_per_dollar = self.std_dev_per_hand ** 2
+        
+        # Number of betting units in bankroll
+        betting_units = self.starting_bankroll / avg_bet_dollars if avg_bet_dollars > 0 else 0
+        
+        # Risk of ruin formula for advantage play: exp(-2 * edge_per_unit * units / variance_per_unit)
+        if betting_units > 0 and variance_per_dollar > 0:
+            exponent = -2 * edge_per_dollar * betting_units / variance_per_dollar
             ror = math.exp(exponent) * 100
         else:
-            ror = 0.0  # No variance means no risk
+            ror = 0.0
         
         return min(ror, 100.0)  # Cap at 100%
     
