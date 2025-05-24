@@ -441,6 +441,50 @@ class Visualizer:
         
         return fig
     
+    def plot_best_vs_worst_trajectories(self, best_trajectory: List[float], 
+                                       worst_trajectory: List[float],
+                                       starting_bankroll: float) -> go.Figure:
+        """
+        Plot the best and worst case trajectories from simulations.
+        """
+        max_hours = max(len(best_trajectory), len(worst_trajectory))
+        hours = np.arange(0, max_hours)
+        
+        fig = go.Figure()
+        
+        # Add best case trajectory
+        fig.add_trace(go.Scatter(
+            x=hours[:len(best_trajectory)],
+            y=best_trajectory,
+            mode='lines',
+            name='Best Case Result',
+            line=dict(color=self.colors['success'], width=3)
+        ))
+        
+        # Add worst case trajectory
+        fig.add_trace(go.Scatter(
+            x=hours[:len(worst_trajectory)],
+            y=worst_trajectory,
+            mode='lines',
+            name='Worst Case Result',
+            line=dict(color=self.colors['danger'], width=3)
+        ))
+        
+        # Add starting bankroll line
+        fig.add_hline(y=starting_bankroll, line_dash="dot", 
+                     line_color="gray",
+                     annotation_text="Starting Bankroll")
+        
+        fig.update_layout(
+            title='Range of Possible Outcomes: Best vs Worst Case',
+            xaxis_title='Hours Played',
+            yaxis_title='Bankroll ($)',
+            hovermode='x unified',
+            showlegend=True
+        )
+        
+        return fig
+    
     def analyze_drawdowns(self, trajectories: List[List[float]]) -> Dict:
         """
         Analyze drawdowns across all simulation trajectories.

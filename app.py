@@ -364,6 +364,15 @@ def main():
             st.metric("Average Actual Profit", f"${avg_profit:.2f}", 
                      delta=f"${avg_profit - total_ev:.2f}")
         
+        # First graph: Expected vs Average Actual
+        trajectory_fig = visualizer.plot_average_trajectory_vs_expected(
+            avg_trajectory, hours_played, hourly_ev, starting_bankroll
+        )
+        st.plotly_chart(trajectory_fig, use_container_width=True)
+        
+        # Second graph: Best vs Worst Case Analysis
+        st.subheader("Best vs Worst Case Scenarios")
+        
         # Find best and worst case trajectories
         final_profits = [traj[-1] - starting_bankroll for traj in monte_carlo_results['trajectories']]
         best_idx = np.argmax(final_profits)
@@ -371,12 +380,23 @@ def main():
         best_trajectory = monte_carlo_results['trajectories'][best_idx]
         worst_trajectory = monte_carlo_results['trajectories'][worst_idx]
         
-        # Plot average trajectory vs expected with best/worst overlays
-        trajectory_fig = visualizer.plot_average_trajectory_with_extremes(
-            avg_trajectory, best_trajectory, worst_trajectory, 
-            hours_played, hourly_ev, starting_bankroll
+        # Show best/worst profit metrics
+        best_profit = best_trajectory[-1] - starting_bankroll
+        worst_profit = worst_trajectory[-1] - starting_bankroll
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Best Case Profit", f"${best_profit:.2f}", 
+                     delta=f"${best_profit - total_ev:.2f} vs Expected")
+        with col2:
+            st.metric("Worst Case Profit", f"${worst_profit:.2f}", 
+                     delta=f"${worst_profit - total_ev:.2f} vs Expected")
+        
+        # Plot best vs worst trajectories
+        extremes_fig = visualizer.plot_best_vs_worst_trajectories(
+            best_trajectory, worst_trajectory, starting_bankroll
         )
-        st.plotly_chart(trajectory_fig, use_container_width=True)
+        st.plotly_chart(extremes_fig, use_container_width=True)
         
         # Additional risk analysis
         st.subheader("Bankroll Recommendations")
