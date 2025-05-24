@@ -70,13 +70,16 @@ class MonteCarloSimulation:
                 bankroll += hand_result
                 hands_played += 1
             
-            # Record bankroll at end of hour
-            bankroll_trajectory.append(bankroll)
-            
+            # Check for bankruptcy first
             if bankroll <= 0:
-                # Fill remaining hours with 0 (ruined)
+                # Record bankruptcy and fill remaining hours with 0
+                bankroll_trajectory.append(0)
                 bankroll_trajectory.extend([0] * (hours_played - hour - 1))
+                bankroll = 0  # Set to 0 for final_bankroll calculation
                 break
+            else:
+                # Record bankroll at end of hour
+                bankroll_trajectory.append(bankroll)
         
         # Calculate actual average edge experienced
         actual_avg_edge = (total_edge_weighted / total_bet_amount) if total_bet_amount > 0 else 0
