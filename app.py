@@ -364,9 +364,17 @@ def main():
             st.metric("Average Actual Profit", f"${avg_profit:.2f}", 
                      delta=f"${avg_profit - total_ev:.2f}")
         
-        # Plot average trajectory vs expected
-        trajectory_fig = visualizer.plot_average_trajectory_vs_expected(
-            avg_trajectory, hours_played, hourly_ev, starting_bankroll
+        # Find best and worst case trajectories
+        final_profits = [traj[-1] - starting_bankroll for traj in monte_carlo_results['trajectories']]
+        best_idx = np.argmax(final_profits)
+        worst_idx = np.argmin(final_profits)
+        best_trajectory = monte_carlo_results['trajectories'][best_idx]
+        worst_trajectory = monte_carlo_results['trajectories'][worst_idx]
+        
+        # Plot average trajectory vs expected with best/worst overlays
+        trajectory_fig = visualizer.plot_average_trajectory_with_extremes(
+            avg_trajectory, best_trajectory, worst_trajectory, 
+            hours_played, hourly_ev, starting_bankroll
         )
         st.plotly_chart(trajectory_fig, use_container_width=True)
         
@@ -397,11 +405,7 @@ def main():
             else:
                 st.error("⚠️ Negative edge - not recommended")
         
-        # Plot the actual trajectory vs expected
-        trajectory_fig = visualizer.plot_single_trajectory_vs_expected(
-            single_result['trajectory'], hours_played, hourly_ev, starting_bankroll
-        )
-        st.plotly_chart(trajectory_fig, use_container_width=True)
+
 
     # Information section
     st.sidebar.markdown("---")
