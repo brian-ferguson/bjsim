@@ -333,16 +333,36 @@ def main():
         else:
             st.error("Negative edge detected - N₀ calculation not applicable")
         
-        # Single simulation comparison
-        st.subheader("Single Simulation Example")
-        actual_profit = single_result['final_bankroll'] - starting_bankroll
+        # Average trajectory analysis
+        st.subheader("Average Performance vs Expected")
+        
+        # Calculate average trajectory across all simulations
+        max_hours = len(monte_carlo_results['trajectories'][0]) - 1
+        avg_trajectory = []
+        
+        for hour in range(max_hours + 1):
+            hour_values = []
+            for trajectory in monte_carlo_results['trajectories']:
+                if hour < len(trajectory):
+                    hour_values.append(trajectory[hour])
+                else:
+                    hour_values.append(0)  # Ruined simulations
+            avg_trajectory.append(np.mean(hour_values))
+        
+        avg_profit = avg_trajectory[-1] - starting_bankroll
         
         col1, col2 = st.columns(2)
         with col1:
             st.metric("Expected Profit", f"${total_ev:.2f}")
         with col2:
-            st.metric("Actual Profit (Random)", f"${actual_profit:.2f}", 
-                     delta=f"${actual_profit - total_ev:.2f}")
+            st.metric("Average Actual Profit", f"${avg_profit:.2f}", 
+                     delta=f"${avg_profit - total_ev:.2f}")
+        
+        # Plot average trajectory vs expected
+        trajectory_fig = visualizer.plot_average_trajectory_vs_expected(
+            avg_trajectory, hours_played, hourly_ev, starting_bankroll
+        )
+        st.plotly_chart(trajectory_fig, use_container_width=True)
         
         # Additional risk analysis
         st.subheader("Bankroll Recommendations")

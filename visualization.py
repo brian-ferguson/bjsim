@@ -303,6 +303,64 @@ class Visualizer:
         
         return fig
     
+    def plot_average_trajectory_vs_expected(self, avg_trajectory: List[float], 
+                                          hours_played: int, hourly_ev: float, 
+                                          starting_bankroll: float) -> go.Figure:
+        """
+        Plot the average trajectory of all simulations against the expected value line.
+        """
+        hours = np.arange(0, len(avg_trajectory))
+        expected_trajectory = starting_bankroll + (hours * hourly_ev)
+        
+        fig = go.Figure()
+        
+        # Add expected trajectory
+        fig.add_trace(go.Scatter(
+            x=hours,
+            y=expected_trajectory,
+            mode='lines',
+            name='Expected Value',
+            line=dict(color=self.colors['primary'], width=3, dash='dash')
+        ))
+        
+        # Add average actual trajectory
+        final_avg_profit = avg_trajectory[-1] - starting_bankroll
+        expected_profit = expected_trajectory[-1] - starting_bankroll
+        
+        # Color based on performance vs expected
+        if final_avg_profit > expected_profit:
+            color = self.colors['success']
+            name = 'Average Actual (Above Expected)'
+        elif final_avg_profit < expected_profit:
+            color = self.colors['danger'] 
+            name = 'Average Actual (Below Expected)'
+        else:
+            color = self.colors['warning']
+            name = 'Average Actual (At Expected)'
+        
+        fig.add_trace(go.Scatter(
+            x=hours,
+            y=avg_trajectory,
+            mode='lines',
+            name=name,
+            line=dict(color=color, width=3)
+        ))
+        
+        # Add starting bankroll line
+        fig.add_hline(y=starting_bankroll, line_dash="dot", 
+                     line_color="gray",
+                     annotation_text="Starting Bankroll")
+        
+        fig.update_layout(
+            title='Average Performance vs Expected (10,000 Simulations)',
+            xaxis_title='Hours Played',
+            yaxis_title='Bankroll ($)',
+            hovermode='x unified',
+            showlegend=True
+        )
+        
+        return fig
+    
     def analyze_drawdowns(self, trajectories: List[List[float]]) -> Dict:
         """
         Analyze drawdowns across all simulation trajectories.
