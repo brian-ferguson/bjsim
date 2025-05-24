@@ -105,8 +105,8 @@ class BlackjackCalculator:
         # Base frequencies for 75% penetration, 6-deck game
         if penetration >= 0.80:  # Deep penetration (80%+)
             frequencies = {
-                -3: 0.08, -2: 0.12, -1: 0.18, 0: 0.22, 1: 0.20,
-                2: 0.12, 3: 0.06, 4: 0.02, 5: 0.008, 6: 0.002
+                -3: 0.08, -2: 0.12, -1: 0.18, 0: 0.22, 1: 0.18,
+                2: 0.12, 3: 0.06, 4: 0.025, 5: 0.015, 6: 0.005
             }
         elif penetration >= 0.70:  # Good penetration (70-80%)
             frequencies = {
@@ -141,27 +141,37 @@ class BlackjackCalculator:
     
     def _calculate_count_edges(self):
         """
-        Calculate player edge for each true count based on table rules.
+        Calculate player edge for each true count based on simulation data.
+        Uses professional simulation values for 6-deck, H17, 83% penetration.
         """
+        # Base edges from professional simulation data
+        base_edges = {
+            -3: -0.006,  # -0.6%
+            -2: -0.005,  # -0.5%
+            -1: -0.004,  # -0.4%
+             0: -0.003,  # -0.3%
+             1:  0.005,  # +0.5%
+             2:  0.010,  # +1.0%
+             3:  0.015,  # +1.5%
+             4:  0.020,  # +2.0%
+             5:  0.022,  # +2.2%
+             6:  0.023,  # +2.3%
+        }
+        
+        # Adjust for table rules
         edges = {}
-        
-        # Base edge per true count (affected by rules)
-        edge_per_count = 0.005  # Standard 0.5% per true count
-        
-        # Adjust edge per count based on rules
-        if self.game_rules['late_surrender']:
-            edge_per_count += 0.0005  # Surrender increases advantage at high counts
-        
-        if self.game_rules['double_after_split']:
-            edge_per_count += 0.0002  # DAS slightly increases advantage
-        
-        for tc in range(-3, 7):
-            if tc <= 0:
-                # Negative/neutral counts: house edge gets worse for player
-                edges[tc] = -self.base_house_edge + (tc * edge_per_count)
-            else:
-                # Positive counts: player advantage increases
-                edges[tc] = -self.base_house_edge + (tc * 0.007)  # Slightly higher for positive
+        for tc, base_edge in base_edges.items():
+            edge = base_edge
+            
+            # Adjust for favorable rules (only for positive counts)
+            if tc > 0:
+                if self.game_rules['late_surrender']:
+                    edge += 0.001  # Surrender adds ~0.1% at high counts
+                
+                if self.game_rules['double_after_split']:
+                    edge += 0.0005  # DAS adds slight advantage
+            
+            edges[tc] = edge
         
         return edges
     
@@ -216,10 +226,8 @@ class BlackjackCalculator:
         return ev_per_hand * hands_per_hour
     
     def calculate_hourly_std(self):
-        """Calculate standard deviation per hour."""
-        hands_per_hour = self.hands_per_hour
-        variance_per_hand = (self.std_dev_per_hand * self.avg_bet) ** 2
-        hourly_variance = variance_per_hand * hands_per_hour
+        """Calculate standard deviation per hour using bet-weighted variance."""
+        hourly_variance = self.calculate_hourly_variance()
         return math.sqrt(hourly_variance)
     
     def calculate_risk_of_ruin(self, hours_played):
