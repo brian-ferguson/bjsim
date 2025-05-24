@@ -197,7 +197,7 @@ def main():
         st.plotly_chart(ev_fig, use_container_width=True)
         
         # Run comprehensive Monte Carlo analysis
-        st.subheader("Monte Carlo Analysis (10,000 Runs)")
+        st.subheader(f"Monte Carlo Analysis ({num_runs:,} Runs)")
         
         # Create progress bar with text
         progress_bar = st.progress(0)
