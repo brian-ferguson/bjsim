@@ -112,25 +112,39 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using the standard formula for advantage play.
-        RoR = exp(-2 * edge * bankroll / variance)
+        Calculate risk of ruin using the correct formula for advantage play.
+        RoR = exp(-2 * edge * bankroll / variance_per_hand)
         """
-        # Risk of ruin formula for dollar-based betting
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Calculate the effective edge per dollar bet
-        # This accounts for the weighted average of all bet sizes
-        effective_edge_per_dollar = self.edge
+        # Calculate hourly variance
+        hourly_variance = self.calculate_hourly_variance()
         
-        # Standard deviation per dollar (using the average bet as normalization)
-        std_dev_per_dollar = self.std_dev_per_hand / self.avg_bet if self.avg_bet > 0 else self.std_dev_per_hand
+        # Calculate variance per hand
+        variance_per_hand = hourly_variance / self.hands_per_hour
         
-        # Calculate RoR using bankroll in dollars
-        exponent = -2 * effective_edge_per_dollar * self.starting_bankroll / (std_dev_per_dollar ** 2 * self.avg_bet ** 2)
-        ror = math.exp(exponent) * 100
+        # Standard RoR formula: exp(-2 * edge * bankroll / variance_per_hand)
+        if variance_per_hand > 0:
+            exponent = -2 * self.edge * self.starting_bankroll / variance_per_hand
+            ror = math.exp(exponent) * 100
+        else:
+            ror = 0.0  # No variance means no risk
         
         return min(ror, 100.0)  # Cap at 100%
+    
+    def calculate_hourly_variance(self):
+        """Calculate variance per hour based on betting strategy."""
+        total_variance = 0
+        for tc in range(-3, 7):
+            frequency = self.count_frequencies.get(tc, 0)
+            bet_amount = self._get_bet_for_count(tc)
+            
+            if bet_amount > 0:  # Only count hands where we actually bet
+                hand_variance = (self.std_dev_per_hand * bet_amount) ** 2
+                total_variance += frequency * hand_variance * self.hands_per_hour
+        
+        return total_variance
     
     def calculate_recommended_bankroll(self):
         """
