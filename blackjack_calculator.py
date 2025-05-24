@@ -97,21 +97,19 @@ class BlackjackCalculator:
         Calculate risk of ruin using the standard formula for advantage play.
         RoR = exp(-2 * edge * bankroll / variance)
         """
-        total_hands = hours_played * self.hands_per_hour
-        
-        # Calculate total variance
-        variance_per_hand = (self.std_dev_per_hand * self.avg_bet) ** 2
-        total_variance = variance_per_hand * total_hands
-        
-        # Risk of ruin formula
+        # Risk of ruin formula for dollar-based betting
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Convert bankroll to units
-        bankroll_units = self.starting_bankroll / self.avg_bet
+        # Calculate the effective edge per dollar bet
+        # This accounts for the weighted average of all bet sizes
+        effective_edge_per_dollar = self.edge
         
-        # Calculate RoR
-        exponent = -2 * self.edge * bankroll_units / (self.std_dev_per_hand ** 2)
+        # Standard deviation per dollar (using the average bet as normalization)
+        std_dev_per_dollar = self.std_dev_per_hand / self.avg_bet if self.avg_bet > 0 else self.std_dev_per_hand
+        
+        # Calculate RoR using bankroll in dollars
+        exponent = -2 * effective_edge_per_dollar * self.starting_bankroll / (std_dev_per_dollar ** 2 * self.avg_bet ** 2)
         ror = math.exp(exponent) * 100
         
         return min(ror, 100.0)  # Cap at 100%

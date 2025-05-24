@@ -110,6 +110,28 @@ def main():
         # Show calculated edge and betting strategy summary
         st.info(f"**Calculated Edge**: {calculator.edge*100:.3f}% (weighted by bet size and count frequencies)")
         
+        # Debug: Show detailed edge breakdown
+        with st.expander("📊 Edge Calculation Breakdown"):
+            st.write("**Count Frequencies and Contributions:**")
+            total_weighted_edge = 0
+            total_weighted_bet = 0
+            
+            for tc in range(-3, 7):
+                frequency = calculator.count_frequencies.get(tc, 0)
+                edge = calculator.count_edges.get(tc, 0)
+                bet_amount = calculator._get_bet_for_count(tc)
+                contribution = frequency * edge * bet_amount
+                
+                total_weighted_edge += contribution
+                total_weighted_bet += frequency * bet_amount
+                
+                st.write(f"TC {tc:+d}: {frequency*100:.1f}% frequency, {edge*100:.1f}% edge, ${bet_amount} bet → {contribution*100:.3f}% contribution")
+            
+            st.write(f"**Total weighted edge: {total_weighted_edge:.6f}**")
+            st.write(f"**Total weighted bet: {total_weighted_bet:.2f}**")
+            st.write(f"**Final edge: {(total_weighted_edge/total_weighted_bet)*100:.3f}%**")
+            st.write(f"**Average bet: ${calculator.avg_bet:.2f}**")
+        
         # Show betting strategy
         strategy_text = "**Your Betting Strategy**: "
         for rule in sorted(st.session_state.betting_strategy, key=lambda x: x['true_count']):
