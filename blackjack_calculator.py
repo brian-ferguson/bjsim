@@ -44,10 +44,10 @@ class BlackjackCalculator:
         
         for bet_rule in sorted_strategy:
             if true_count >= bet_rule['true_count']:
-                return bet_rule['bet_units']
+                return bet_rule['bet_amount']
         
         # If no rule matches, use the lowest bet
-        return min(rule['bet_units'] for rule in self.betting_strategy)
+        return min(rule['bet_amount'] for rule in self.betting_strategy)
     
     def _calculate_weighted_edge(self):
         """
@@ -58,12 +58,12 @@ class BlackjackCalculator:
         
         for true_count, frequency in self.count_frequencies.items():
             edge = self.count_edges[true_count]
-            bet_units = self._get_bet_for_count(true_count)
+            bet_amount = self._get_bet_for_count(true_count)
             
             # Weight the edge by frequency and bet size
-            weighted_edge = frequency * edge * bet_units
+            weighted_edge = frequency * edge * bet_amount
             total_weighted_edge += weighted_edge
-            total_frequency += frequency * bet_units
+            total_frequency += frequency * bet_amount
         
         return total_weighted_edge / total_frequency if total_frequency > 0 else 0
     
@@ -74,8 +74,8 @@ class BlackjackCalculator:
         total_weighted_bet = 0
         
         for true_count, frequency in self.count_frequencies.items():
-            bet_units = self._get_bet_for_count(true_count)
-            total_weighted_bet += frequency * bet_units
+            bet_amount = self._get_bet_for_count(true_count)
+            total_weighted_bet += frequency * bet_amount
         
         return total_weighted_bet
     
@@ -165,24 +165,24 @@ class BlackjackCalculator:
         
         # Get edge and bet for this count
         edge = self.count_edges[selected_tc]
-        bet_units = self._get_bet_for_count(selected_tc)
+        bet_amount = self._get_bet_for_count(selected_tc)
         
         # Simulate hand outcome with this edge
         outcome = np.random.normal(
-            loc=edge * bet_units,
-            scale=self.std_dev_per_hand * bet_units
+            loc=edge * bet_amount,
+            scale=self.std_dev_per_hand * bet_amount
         )
         
         return outcome
     
     def get_simulation_parameters(self):
         """Return key parameters for display."""
-        min_bet = min(rule['bet_units'] for rule in self.betting_strategy)
-        max_bet = max(rule['bet_units'] for rule in self.betting_strategy)
+        min_bet = min(rule['bet_amount'] for rule in self.betting_strategy)
+        max_bet = max(rule['bet_amount'] for rule in self.betting_strategy)
         
         return {
             'num_decks': self.num_decks,
-            'bet_spread': f"{min_bet}-{max_bet} units",
+            'bet_spread': f"${min_bet}-${max_bet}",
             'starting_bankroll': self.starting_bankroll,
             'calculated_edge': f"{self.edge*100:.3f}%",
             'hands_per_hour': self.hands_per_hour,

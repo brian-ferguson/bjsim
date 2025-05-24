@@ -30,30 +30,30 @@ def main():
     )
     
     # Betting Strategy Configuration
-    st.sidebar.subheader("Betting Strategy (Units)")
-    st.sidebar.write("Set your bet for each true count:")
+    st.sidebar.subheader("Betting Strategy ($)")
+    st.sidebar.write("Set your bet amount for each true count:")
     
     # Initialize session state for betting strategy with TC -3 to +6
-    if 'bet_units' not in st.session_state:
-        st.session_state.bet_units = {
-            -3: 1, -2: 1, -1: 1, 0: 1, 1: 1,
-            2: 5, 3: 10, 4: 15, 5: 20, 6: 25
+    if 'bet_amounts' not in st.session_state:
+        st.session_state.bet_amounts = {
+            -3: 10, -2: 10, -1: 10, 0: 10, 1: 10,
+            2: 50, 3: 100, 4: 150, 5: 200, 6: 250
         }
     
     # Create betting strategy inputs for each true count
     betting_strategy = []
     for tc in range(-3, 7):  # TC from -3 to +6
-        bet_units = st.sidebar.number_input(
+        bet_amount = st.sidebar.number_input(
             f"TC {tc:+d}",
             min_value=0,
-            max_value=100,
-            value=st.session_state.bet_units[tc],
-            step=1,
+            max_value=10000,
+            value=st.session_state.bet_amounts[tc],
+            step=5,
             key=f"bet_tc_{tc}",
-            help=f"Bet units when true count is {tc} (0 = sit out)"
+            help=f"Bet amount ($) when true count is {tc} (0 = sit out)"
         )
-        st.session_state.bet_units[tc] = bet_units
-        betting_strategy.append({'true_count': tc, 'bet_units': bet_units})
+        st.session_state.bet_amounts[tc] = bet_amount
+        betting_strategy.append({'true_count': tc, 'bet_amount': bet_amount})
     
     # Store the betting strategy for the calculator
     st.session_state.betting_strategy = betting_strategy
@@ -113,7 +113,10 @@ def main():
         # Show betting strategy
         strategy_text = "**Your Betting Strategy**: "
         for rule in sorted(st.session_state.betting_strategy, key=lambda x: x['true_count']):
-            strategy_text += f"TC {rule['true_count']}+ → {rule['bet_units']} units, "
+            if rule['bet_amount'] == 0:
+                strategy_text += f"TC {rule['true_count']}+ → sit out, "
+            else:
+                strategy_text += f"TC {rule['true_count']}+ → ${rule['bet_amount']}, "
         st.write(strategy_text.rstrip(", "))
         
         # Basic statistics
