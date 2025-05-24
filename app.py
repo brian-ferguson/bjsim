@@ -36,8 +36,8 @@ def main():
     # Initialize session state for betting strategy with TC -3 to +6
     if 'bet_amounts' not in st.session_state:
         st.session_state.bet_amounts = {
-            -3: 0, -2: 0, -1: 0, 0: 10, 1: 10,
-            2: 25, 3: 50, 4: 75, 5: 100, 6: 100
+            -3: 0, -2: 0, -1: 0, 0: 5, 1: 5,
+            2: 10, 3: 15, 4: 25, 5: 35, 6: 50
         }
     
     # Create betting strategy inputs for each true count
