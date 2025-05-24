@@ -38,16 +38,16 @@ class BlackjackCalculator:
             2: 0.08, 3: 0.03, 4: 0.015, 5: 0.005, 6: 0.0025
         }
         
-        # Calculate edge based on true count with proper OLG rules
+        # Calculate edge based on true count with realistic card counting advantages
         self.count_edges = {}
         for tc in range(-3, 7):
-            # Base edge starts from house edge, adjusted by true count
             if tc <= 0:
-                # Negative counts: house edge gets worse for player
+                # Negative counts: house edge gets worse for player (0.5% per count)
                 self.count_edges[tc] = -self.base_house_edge + (tc * 0.005)
             else:
-                # Positive counts: approximately 0.5% per true count advantage
-                self.count_edges[tc] = -self.base_house_edge + (tc * 0.005)
+                # Positive counts: approximately 0.5% advantage per true count ABOVE house edge
+                # This gives realistic edges: TC+1=0.9%, TC+2=1.4%, TC+3=1.9%, etc.
+                self.count_edges[tc] = -self.base_house_edge + (tc * 0.010)
         
         # Calculate weighted average edge and bet
         self.edge = self._calculate_weighted_edge()
