@@ -87,7 +87,14 @@ def main():
         help="100 for solo play, 250+ for team play"
     )
     
-
+    num_runs = st.sidebar.number_input(
+        "Number of Simulation Runs",
+        min_value=1000,
+        max_value=50000,
+        value=5000,
+        step=1000,
+        help="More runs provide better statistical accuracy but take longer to compute"
+    )
     
     # Calculate button
     if st.sidebar.button("Run Simulation", type="primary"):
@@ -207,7 +214,6 @@ def main():
         
         # Modified simulation call with custom progress updates
         results = []
-        num_runs = 10000
         
         for i in range(num_runs):
             result = simulation.run_single_simulation(hours_played)
@@ -258,7 +264,7 @@ def main():
         profits = monte_carlo_results['profits']
         
         # Statistical Analysis
-        st.subheader("Statistical Analysis (10,000 Simulations)")
+        st.subheader(f"Statistical Analysis ({num_runs:,} Simulations)")
         
         # Display key statistics
         mean_profit = np.mean(profits)

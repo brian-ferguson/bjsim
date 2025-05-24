@@ -352,7 +352,7 @@ class Visualizer:
                      annotation_text="Starting Bankroll")
         
         fig.update_layout(
-            title='Average Performance vs Expected (10,000 Simulations)',
+            title=f'Average Performance vs Expected ({len(avg_trajectory)} Hours)',
             xaxis_title='Hours Played',
             yaxis_title='Bankroll ($)',
             hovermode='x unified',
