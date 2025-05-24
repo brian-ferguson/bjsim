@@ -13,23 +13,41 @@ class BlackjackCalculator:
         self.hands_per_hour = hands_per_hour
         self.betting_strategy = betting_strategy
         
+        # OLG Blackjack Rules Configuration
+        self.game_rules = {
+            'decks': num_decks,
+            'dealer_hits_soft_17': True,  # H17 - worse for player
+            'blackjack_payout': 1.5,     # 3:2 payout
+            'double_any_two': True,      # Can double on any two cards
+            'double_after_split': True,   # DAS allowed
+            'resplit_aces': False,       # Not allowed
+            'late_surrender': False,     # Not allowed
+            'european_no_hole_card': True,  # No dealer peek
+            'insurance_offered': True
+        }
+        
+        # Base house edge with these rules (approximately 0.6%)
+        self.base_house_edge = 0.006
+        
         # Standard blackjack statistics
         self.std_dev_per_hand = 1.15  # Standard deviation per unit bet
         
         # True count frequency distribution (based on simulation studies)
-        # Extended range from -3 to +6 to match betting strategy
         self.count_frequencies = {
             -3: 0.15, -2: 0.18, -1: 0.22, 0: 0.20, 1: 0.12,
             2: 0.08, 3: 0.03, 4: 0.015, 5: 0.005, 6: 0.0025
         }
         
-        # Calculate edge based on true count (approximate)
+        # Calculate edge based on true count with proper OLG rules
         self.count_edges = {}
-        for tc in range(-3, 7):  # TC from -3 to +6
+        for tc in range(-3, 7):
+            # Base edge starts from house edge, adjusted by true count
             if tc <= 0:
-                self.count_edges[tc] = -0.005 + (tc * 0.001)  # Slightly worse for negative counts
+                # Negative counts: house edge gets worse for player
+                self.count_edges[tc] = -self.base_house_edge + (tc * 0.005)
             else:
-                self.count_edges[tc] = tc * 0.005  # ~0.5% per true count
+                # Positive counts: approximately 0.5% per true count advantage
+                self.count_edges[tc] = -self.base_house_edge + (tc * 0.005)
         
         # Calculate weighted average edge and bet
         self.edge = self._calculate_weighted_edge()

@@ -110,6 +110,24 @@ def main():
         # Show calculated edge and betting strategy summary
         st.info(f"**Calculated Edge**: {calculator.edge*100:.3f}% (weighted by bet size and count frequencies)")
         
+        # Show current game rules
+        with st.expander("🎲 Game Rules (OLG Blackjack)"):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("**Current Rule Set:**")
+                st.write(f"- Decks: {calculator.game_rules['decks']}")
+                st.write(f"- Dealer hits soft 17: {'Yes' if calculator.game_rules['dealer_hits_soft_17'] else 'No'}")
+                st.write(f"- Blackjack payout: {calculator.game_rules['blackjack_payout']}:1")
+                st.write(f"- Double any two cards: {'Yes' if calculator.game_rules['double_any_two'] else 'No'}")
+                st.write(f"- Double after split: {'Yes' if calculator.game_rules['double_after_split'] else 'No'}")
+            with col2:
+                st.write("**Additional Rules:**")
+                st.write(f"- Resplit aces: {'Yes' if calculator.game_rules['resplit_aces'] else 'No'}")
+                st.write(f"- Late surrender: {'Yes' if calculator.game_rules['late_surrender'] else 'No'}")
+                st.write(f"- European no hole card: {'Yes' if calculator.game_rules['european_no_hole_card'] else 'No'}")
+                st.write(f"- Insurance offered: {'Yes' if calculator.game_rules['insurance_offered'] else 'No'}")
+                st.write(f"- **Base house edge: {calculator.base_house_edge*100:.1f}%**")
+
         # Debug: Show detailed edge breakdown
         with st.expander("📊 Edge Calculation Breakdown"):
             st.write("**Count Frequencies and Contributions:**")
@@ -204,6 +222,7 @@ def main():
         trajectories = [r['trajectory'] for r in results]
         max_bankrolls = [r['max_bankroll'] for r in results]
         min_bankrolls = [r['min_bankroll'] for r in results]
+        actual_edges = [r['actual_avg_edge'] for r in results]
         
         profits = [fb - starting_bankroll for fb in final_bankrolls]
         
@@ -213,6 +232,7 @@ def main():
             'profits': np.array(profits),
             'max_bankrolls': np.array(max_bankrolls),
             'min_bankrolls': np.array(min_bankrolls),
+            'actual_edges': np.array(actual_edges),
             'statistics': {
                 'mean_profit': np.mean(profits),
                 'median_profit': np.median(profits),
@@ -221,7 +241,9 @@ def main():
                 'max_profit': np.max(profits),
                 'prob_profit': np.mean(np.array(profits) > 0),
                 'prob_ruin': np.mean(np.array(final_bankrolls) <= 0),
-                'prob_double': np.mean(np.array(final_bankrolls) >= 2 * starting_bankroll)
+                'prob_double': np.mean(np.array(final_bankrolls) >= 2 * starting_bankroll),
+                'mean_actual_edge': np.mean(actual_edges),
+                'std_actual_edge': np.std(actual_edges)
             }
         }
         
@@ -244,13 +266,23 @@ def main():
         confidence_interval_lower = mean_profit - 1.96 * std_profit
         confidence_interval_upper = mean_profit + 1.96 * std_profit
         
-        stat_col1, stat_col2, stat_col3 = st.columns(3)
+        # Display actual vs theoretical edge
+        theoretical_edge = calculator.edge
+        actual_edge = monte_carlo_results['statistics']['mean_actual_edge']
+        
+        stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
         with stat_col1:
             st.metric("Mean Profit", f"${mean_profit:.2f}")
         with stat_col2:
             st.metric("Standard Deviation", f"${std_profit:.2f}")
         with stat_col3:
-            st.metric("95% Confidence Interval", f"${confidence_interval_lower:.0f} to ${confidence_interval_upper:.0f}")
+            st.metric("Theoretical Edge", f"{theoretical_edge*100:.3f}%")
+        with stat_col4:
+            st.metric("Actual Avg Edge", f"{actual_edge*100:.3f}%", 
+                     delta=f"{(actual_edge-theoretical_edge)*100:.3f}%")
+        
+        # Second row with confidence interval
+        st.metric("95% Confidence Interval", f"${confidence_interval_lower:.0f} to ${confidence_interval_upper:.0f}")
         
         # Histogram of final bankrolls
         st.subheader("Distribution of Final Bankrolls")

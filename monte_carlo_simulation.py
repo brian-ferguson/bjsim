@@ -24,6 +24,10 @@ class MonteCarloSimulation:
         bankroll_trajectory = [bankroll]
         hands_played = 0
         
+        # Track actual edge experienced during simulation
+        total_edge_weighted = 0
+        total_bet_amount = 0
+        
         for hour in range(hours_played):
             # Simulate hands for this hour
             for _ in range(self.calculator.hands_per_hour):
@@ -31,8 +35,33 @@ class MonteCarloSimulation:
                     # Ruin occurred
                     break
                 
-                # Simulate single hand with realistic count distribution
-                hand_result = self.calculator.simulate_hand_with_count()
+                # Get random true count for this hand
+                rand = np.random.random()
+                cumulative_freq = 0
+                selected_tc = None
+                
+                for true_count in sorted(self.calculator.count_frequencies.keys()):
+                    cumulative_freq += self.calculator.count_frequencies[true_count]
+                    if rand <= cumulative_freq:
+                        selected_tc = true_count
+                        break
+                
+                if selected_tc is None:
+                    selected_tc = 0
+                
+                # Get edge and bet for this count
+                edge = self.calculator.count_edges[selected_tc]
+                bet_amount = self.calculator._get_bet_for_count(selected_tc)
+                
+                # Track actual edge experienced
+                total_edge_weighted += edge * bet_amount
+                total_bet_amount += bet_amount
+                
+                # Simulate hand outcome
+                hand_result = np.random.normal(
+                    loc=edge * bet_amount,
+                    scale=self.calculator.std_dev_per_hand * bet_amount
+                )
                 bankroll += hand_result
                 hands_played += 1
             
@@ -44,12 +73,17 @@ class MonteCarloSimulation:
                 bankroll_trajectory.extend([0] * (hours_played - hour))
                 break
         
+        # Calculate actual average edge experienced
+        actual_avg_edge = (total_edge_weighted / total_bet_amount) if total_bet_amount > 0 else 0
+        
         return {
             'final_bankroll': max(0, bankroll),
             'trajectory': bankroll_trajectory,
             'hands_played': hands_played,
             'max_bankroll': max(bankroll_trajectory),
-            'min_bankroll': min(bankroll_trajectory)
+            'min_bankroll': min(bankroll_trajectory),
+            'actual_avg_edge': actual_avg_edge,
+            'total_bet_amount': total_bet_amount
         }
     
     def run_simulation(self, hours_played: int, num_runs: int = 1000, progress_bar=None) -> Dict:
