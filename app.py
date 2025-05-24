@@ -16,18 +16,86 @@ def main():
     st.markdown("**Analyze expected value, variance, and risk of ruin with Monte Carlo analysis**")
     
     # Sidebar for inputs
-    st.sidebar.header("Simulation Parameters")
+    st.sidebar.header("Table Rules Configuration")
     
-    # Input validation ranges
-    deck_options = [1, 2, 6]
-    
-    # User inputs with validation
+    # Deck configuration
+    deck_options = [1, 2, 4, 6, 8]
     num_decks = st.sidebar.selectbox(
         "Number of Decks in Shoe",
         options=deck_options,
-        index=2,
+        index=3,
         help="Standard casinos use 6-deck shoes"
     )
+    
+    # Deck penetration
+    penetration_options = []
+    for i in range(1, num_decks + 1):
+        percentage = (i / num_decks) * 100
+        penetration_options.append((i, f"{i} deck{'' if i == 1 else 's'} ({percentage:.0f}%)"))
+    
+    penetration_deck, penetration_label = st.sidebar.selectbox(
+        "Deck Penetration",
+        options=penetration_options,
+        index=len(penetration_options)-2 if len(penetration_options) > 1 else 0,
+        format_func=lambda x: x[1],
+        help="How many decks are dealt before shuffle"
+    )
+    
+    # Dealer rules
+    dealer_hits_soft17 = st.sidebar.selectbox(
+        "Dealer Hits Soft 17",
+        options=[True, False],
+        index=0,
+        format_func=lambda x: "Yes" if x else "No",
+        help="Does dealer hit or stand on soft 17"
+    )
+    
+    # Doubling rules
+    double_after_split = st.sidebar.selectbox(
+        "Double After Split (DAS)",
+        options=[True, False],
+        index=0,
+        format_func=lambda x: "Yes" if x else "No",
+        help="Can you double down after splitting"
+    )
+    
+    # Splitting rules
+    can_split_aces = st.sidebar.selectbox(
+        "Split Aces Allowed",
+        options=[True, False],
+        index=0,
+        format_func=lambda x: "Yes" if x else "No",
+        help="Can you split aces"
+    )
+    
+    resplit_aces = False
+    if can_split_aces:
+        resplit_aces = st.sidebar.selectbox(
+            "Resplit Aces",
+            options=[True, False],
+            index=1,
+            format_func=lambda x: "Yes" if x else "No",
+            help="Can you resplit aces if you get another ace"
+        )
+    
+    max_splits = st.sidebar.selectbox(
+        "Maximum Split Hands",
+        options=[2, 3, 4],
+        index=1,
+        help="Maximum number of hands after splitting"
+    )
+    
+    # Surrender
+    surrender_allowed = st.sidebar.selectbox(
+        "Late Surrender",
+        options=[True, False],
+        index=1,
+        format_func=lambda x: "Yes" if x else "No",
+        help="Can you surrender after dealer checks for blackjack"
+    )
+    
+    st.sidebar.markdown("---")
+    st.sidebar.header("Simulation Parameters")
     
     # Betting Strategy Configuration
     st.sidebar.subheader("Betting Strategy ($)")
@@ -103,13 +171,45 @@ def main():
             st.error("Please define at least 2 betting levels")
             return
         
+        # Prepare table rules for calculator
+        table_rules = {
+            'penetration_deck': penetration_deck,
+            'dealer_hits_soft_17': dealer_hits_soft17,
+            'double_after_split': double_after_split,
+            'can_split_aces': can_split_aces,
+            'resplit_aces': resplit_aces,
+            'max_splits': max_splits,
+            'surrender_allowed': surrender_allowed
+        }
+        
         # Initialize calculator
         calculator = BlackjackCalculator(
             num_decks=num_decks,
             starting_bankroll=starting_bankroll,
             hands_per_hour=hands_per_hour,
-            betting_strategy=st.session_state.betting_strategy
+            betting_strategy=st.session_state.betting_strategy,
+            table_rules=table_rules
         )
+        
+        # Display table rules summary
+        st.header("🎲 Table Rules Configuration")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("**Game Setup:**")
+            st.write(f"• {num_decks} deck shoe")
+            st.write(f"• {penetration_deck} deck penetration ({(penetration_deck/num_decks)*100:.0f}%)")
+            st.write(f"• Dealer {'hits' if dealer_hits_soft17 else 'stands'} on soft 17")
+            
+        with col2:
+            st.write("**Player Options:**")
+            st.write(f"• Double after split: {'Yes' if double_after_split else 'No'}")
+            st.write(f"• Split aces: {'Yes' if can_split_aces else 'No'}")
+            if can_split_aces:
+                st.write(f"• Resplit aces: {'Yes' if resplit_aces else 'No'}")
+            st.write(f"• Max split hands: {max_splits}")
+            st.write(f"• Late surrender: {'Yes' if surrender_allowed else 'No'}")
         
         # Display calculation results
         st.header("📊 Simulation Results")
