@@ -53,7 +53,12 @@ class MonteCarloSimulation:
                 edge = self.calculator.count_edges[selected_tc]
                 bet_amount = self.calculator._get_bet_for_count(selected_tc)
                 
-                # Track actual edge experienced
+                # Skip hands where bet is 0 (sitting out)
+                if bet_amount == 0:
+                    hands_played += 1
+                    continue
+                
+                # Track actual edge experienced (only for hands where we bet)
                 total_edge_weighted += edge * bet_amount
                 total_bet_amount += bet_amount
                 
