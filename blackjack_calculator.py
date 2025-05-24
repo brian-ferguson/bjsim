@@ -30,7 +30,7 @@ class BlackjackCalculator:
         self.base_house_edge = 0.006
         
         # Standard blackjack statistics
-        self.std_dev_per_hand = 1.15  # Standard deviation per unit bet
+        self.std_dev_per_hand = 1.05  # Standard deviation per unit bet (reduced for realistic variance)
         
         # True count frequency distribution (based on simulation studies)
         self.count_frequencies = {
