@@ -71,11 +71,11 @@ class MonteCarloSimulation:
                 hands_played += 1
             
             # Record bankroll at end of hour
-            bankroll_trajectory.append(max(0, bankroll))
+            bankroll_trajectory.append(bankroll)
             
             if bankroll <= 0:
                 # Fill remaining hours with 0 (ruined)
-                bankroll_trajectory.extend([0] * (hours_played - hour))
+                bankroll_trajectory.extend([0] * (hours_played - hour - 1))
                 break
         
         # Calculate actual average edge experienced
