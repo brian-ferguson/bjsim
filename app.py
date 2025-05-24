@@ -413,10 +413,10 @@ def main():
     st.sidebar.markdown("""
     **Edge per True Count:**
     - Negative TC: -0.6% + (TC × 0.5%)
-    - Positive TC: -0.6% + (TC × 1.0%)
+    - Positive TC: -0.6% + (TC × 0.7%)
     
-    **Realistic Card Counting Edges:**
-    - TC +1: 0.4%, TC +2: 1.4%, TC +3: 2.4%
+    **Balanced Card Counting Edges:**
+    - TC +1: 0.1%, TC +2: 0.8%, TC +3: 1.5%
     
     **Frequencies Used:**
     - TC -3: 15%, TC -2: 18%, TC -1: 22%
