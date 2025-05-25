@@ -317,9 +317,10 @@ class BlackjackCalculator:
                             edge = self._get_actual_edge_for_count(true_count)
                             bet_amount = self._get_bet_for_count(true_count)
                             
-                            # Add to total EV calculation
-                            total_ev += edge * bet_amount * frequency
-                            total_freq += frequency
+                            # Only include hands where we actually bet (bet_amount > 0)
+                            if bet_amount > 0:
+                                total_ev += edge * bet_amount * frequency
+                                total_freq += frequency
                             
                         except (ValueError, IndexError):
                             continue
