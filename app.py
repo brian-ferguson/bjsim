@@ -670,13 +670,18 @@ def main():
                             delta="📉 Negative EV"
                         )
                 
-                # Show data source
+                # Show data source and debug info
                 if penetration_deck == num_decks:
                     csv_filename = f"{num_decks}decks-nopenetration.csv"
                 else:
                     csv_filename = f"{num_decks}decks-{penetration_deck}penetration.csv"
                 
-                st.caption(f"📁 Using data from: {csv_filename}")
+                # Debug: Show positive count frequencies
+                pos_count_freq = sum(freq for tc, freq in temp_calculator.count_frequencies.items() if tc > 0)
+                avg_bet = temp_calculator.avg_bet
+                edge = temp_calculator.edge
+                
+                st.caption(f"📁 Data: {csv_filename} | Pos counts: {pos_count_freq:.1f}% | Avg bet: ${avg_bet:.2f} | Edge: {edge*100:.3f}%")
         
         except Exception as e:
             with live_stats_placeholder.container():

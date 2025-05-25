@@ -228,18 +228,20 @@ class BlackjackCalculator:
         Calculate weighted average edge based on true count frequencies and betting strategy.
         """
         total_weighted_edge = 0
-        total_frequency = 0
+        total_weighted_frequency = 0
         
         for true_count, frequency in self.count_frequencies.items():
             edge = self.count_edges[true_count]
             bet_amount = self._get_bet_for_count(true_count)
             
-            # Weight the edge by frequency and bet size
-            weighted_edge = frequency * edge * bet_amount
-            total_weighted_edge += weighted_edge
-            total_frequency += frequency * bet_amount
+            # Only include hands where we actually bet (bet_amount > 0)
+            if bet_amount > 0:
+                # Weight the edge by frequency and bet size for proper averaging
+                weighted_edge = frequency * edge * bet_amount
+                total_weighted_edge += weighted_edge
+                total_weighted_frequency += frequency * bet_amount
         
-        return total_weighted_edge / total_frequency if total_frequency > 0 else 0
+        return total_weighted_edge / total_weighted_frequency if total_weighted_frequency > 0 else 0
     
     def _calculate_average_bet(self):
         """
