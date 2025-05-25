@@ -257,19 +257,40 @@ class BlackjackCalculator:
     def _calculate_average_bet(self):
         """
         Calculate average bet size based on true count frequencies and betting strategy.
+        Uses consistent weighting with EV calculation.
         """
-        total_weighted_bet = 0
+        total_bet = 0
+        total_freq = 0
         
         for true_count, frequency in self.count_frequencies.items():
             bet_amount = self._get_bet_for_count(true_count)
-            total_weighted_bet += frequency * bet_amount
+            total_bet += bet_amount * frequency
+            total_freq += frequency
         
-        return total_weighted_bet
+        return total_bet / total_freq if total_freq > 0 else 0
+    
+    def _calculate_ev_per_hand(self):
+        """
+        Calculate EV per hand as weighted average of (edge × bet) over all counts.
+        This avoids the mismatch between weighted edge and average bet calculations.
+        """
+        total_ev = 0
+        total_freq = 0
+        
+        for true_count, frequency in self.count_frequencies.items():
+            edge = self.count_edges[true_count]
+            bet_amount = self._get_bet_for_count(true_count)
+            
+            # Include ALL counts (even zero bets) in the calculation
+            total_ev += edge * bet_amount * frequency
+            total_freq += frequency
+        
+        return total_ev / total_freq if total_freq > 0 else 0
     
     def calculate_hourly_ev(self):
         """Calculate expected value per hour."""
+        ev_per_hand = self._calculate_ev_per_hand()
         hands_per_hour = self.hands_per_hour
-        ev_per_hand = self.edge * self.avg_bet
         return ev_per_hand * hands_per_hour
     
     def calculate_hourly_std(self):

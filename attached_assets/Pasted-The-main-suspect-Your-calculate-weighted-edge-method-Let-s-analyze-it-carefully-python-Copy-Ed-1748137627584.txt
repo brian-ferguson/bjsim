@@ -1,0 +1,103 @@
+The main suspect: Your _calculate_weighted_edge() method
+Let's analyze it carefully:
+
+python
+Copy
+Edit
+def _calculate_weighted_edge(self):
+    total_weighted_edge = 0
+    total_weighted_frequency = 0
+    
+    for true_count, frequency in self.count_frequencies.items():
+        edge = self.count_edges[true_count]
+        bet_amount = self._get_bet_for_count(true_count)
+        
+        # Only include hands where we actually bet (bet_amount > 0)
+        if bet_amount > 0:
+            weighted_edge = frequency * edge * bet_amount
+            total_weighted_edge += weighted_edge
+            total_weighted_frequency += frequency * bet_amount
+    
+    return total_weighted_edge / total_weighted_frequency if total_weighted_frequency > 0 else 0
+What can cause the big EV drop?
+1. Ignoring counts where bet_amount = 0
+
+You're skipping frequencies where bet_amount == 0 in both numerator and denominator.
+
+This reduces total_weighted_frequency.
+
+If many counts have zero bets, your denominator shrinks significantly.
+
+That tends to inflate the weighted edge, but in practice, if most bets are zero or low, and you lose frequencies outside the spread, your average bet (total_weighted_frequency) drops sharply.
+
+Then your avg_bet (likely calculated separately) will be very low.
+
+2. Missing frequencies outside your bet spread
+
+If frequencies with counts outside the bet spread are ignored (bet_amount = 0), their contribution is discarded entirely.
+
+This means you’re calculating the weighted edge only on a subset of the distribution.
+
+You then use this weighted edge with a separately calculated avg_bet (possibly including frequencies with zero bet) — mismatch here can cause huge drops.
+
+What about avg_bet? How is it calculated?
+You said your hourly EV uses:
+
+python
+Copy
+Edit
+ev_per_hand = self.edge * self.avg_bet
+hourly_ev = ev_per_hand * hands_per_hour
+If self.edge comes from _calculate_weighted_edge() (which excludes zero bet counts), but
+
+self.avg_bet is calculated across all counts including zero bets,
+then multiplying them together will underestimate EV a lot.
+
+How to fix:
+1. Make sure your weighted edge and average bet use the same weighting scheme.
+They should both use the same weighted sums over frequencies and bets.
+
+For example, calculate avg_bet like this:
+
+python
+Copy
+Edit
+def _calculate_average_bet(self):
+    total_bet = 0
+    total_freq = 0
+    for true_count, frequency in self.count_frequencies.items():
+        bet_amount = self._get_bet_for_count(true_count)
+        total_bet += bet_amount * frequency
+        total_freq += frequency
+    return total_bet / total_freq if total_freq > 0 else 0
+2. Or calculate EV per hand as the weighted average of (edge × bet) over all counts:
+python
+Copy
+Edit
+def _calculate_ev_per_hand(self):
+    total_ev = 0
+    total_freq = 0
+    for true_count, frequency in self.count_frequencies.items():
+        edge = self.count_edges[true_count]
+        bet_amount = self._get_bet_for_count(true_count)
+        total_ev += edge * bet_amount * frequency
+        total_freq += frequency
+    return total_ev / total_freq if total_freq > 0 else 0
+Then
+
+python
+Copy
+Edit
+def calculate_hourly_ev(self):
+    ev_per_hand = self._calculate_ev_per_hand()
+    hands_per_hour = self.hands_per_hour
+    return ev_per_hand * hands_per_hour
+This way you never separate edge and avg_bet, avoiding mismatch.
+
+3. Handle TCs outside your bet spread (clamp or extend your bet spread as discussed before) — make sure all frequencies have valid bet_amount and edge.
+Summary of the error:
+Your weighted edge excludes zero bets, but your avg_bet probably includes zero bets (or vice versa).
+
+The mismatch causes your hourly EV to collapse when you exclude TC frequencies outside your bet spread.
+
+Solution: Use consistent weighting for both edge and average bet, or better yet, calculate EV per hand directly as the weighted sum of edge × bet over all counts (including those with zero bets).
