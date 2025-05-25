@@ -623,9 +623,11 @@ def main():
                 table_rules=temp_table_rules
             )
             
-            # Calculate key metrics
+            # Calculate key metrics using current sidebar values
             hourly_ev = temp_calculator.calculate_hourly_ev()
             hourly_std = temp_calculator.calculate_hourly_std()
+            
+            # Use the actual hours_played from sidebar
             risk_of_ruin = temp_calculator.calculate_risk_of_ruin(hours_played)
             
             # Calculate hours to break even (when EV = starting bankroll)
