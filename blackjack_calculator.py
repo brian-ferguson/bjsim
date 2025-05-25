@@ -339,43 +339,43 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using actual betting strategy and count frequencies.
-        Uses the precise bet amounts and frequencies from our data.
+        Calculate risk of ruin using weighted edge methodology.
+        Only considers hands where we actually place bets (positive counts).
         """
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Calculate average bet and variance using actual strategy
-        avg_bet = self._calculate_average_bet()
-        if avg_bet <= 0:
-            return 100.0
-        
-        # Calculate weighted variance per dollar bet
-        total_weighted_variance = 0
-        total_weighted_frequency = 0
+        # Calculate weighted edge and average bet for betting hands only
+        total_weighted_edge = 0
+        total_weighted_bet = 0
+        total_betting_frequency = 0
         
         for true_count, frequency in self.count_frequencies.items():
             bet_amount = self._get_bet_for_count(true_count)
-            if bet_amount > 0:
-                # Standard blackjack variance is ~1.3 per hand
-                # Scale by frequency of this count occurring
-                hand_variance = 1.3 * frequency
-                total_weighted_variance += hand_variance
-                total_weighted_frequency += frequency
+            if bet_amount > 0:  # Only count hands where we actually bet
+                edge = self._get_actual_edge_for_count(true_count)
+                total_weighted_edge += edge * frequency * bet_amount
+                total_weighted_bet += frequency * bet_amount
+                total_betting_frequency += frequency
         
-        if total_weighted_frequency == 0:
+        if total_weighted_bet == 0 or total_betting_frequency == 0:
             return 100.0
         
-        # Variance per average dollar bet
-        variance_per_unit = total_weighted_variance / total_weighted_frequency
+        # Calculate effective edge per dollar bet
+        weighted_average_edge = total_weighted_edge / total_weighted_bet
+        
+        # Calculate average bet size when betting
+        avg_bet_when_betting = total_weighted_bet / total_betting_frequency
         
         # Number of betting units in bankroll
-        betting_units = self.starting_bankroll / avg_bet
+        betting_units = self.starting_bankroll / avg_bet_when_betting
         
-        # Standard risk of ruin formula for advantage play
-        # RoR = exp(-2 * edge * units / variance)
+        # Standard blackjack variance per unit bet
+        variance_per_unit = 1.3
+        
+        # Risk of ruin formula: RoR = exp(-2 * edge * units / variance)
         if betting_units > 0 and variance_per_unit > 0:
-            exponent = -2 * self.edge * betting_units / variance_per_unit
+            exponent = -2 * weighted_average_edge * betting_units / variance_per_unit
             # Prevent numerical overflow/underflow
             exponent = max(min(exponent, 50), -50)
             ror = math.exp(exponent) * 100
