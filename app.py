@@ -523,6 +523,9 @@ def main():
         # Calculate expected profit for comparison
         total_ev = calculator.calculate_hourly_ev() * hours_played
         
+        # Use the actual mean profit from Monte Carlo simulation results
+        avg_profit = monte_carlo_results['statistics']['mean_profit']
+        
         # Calculate average trajectory across all simulations properly
         if monte_carlo_results['trajectories']:
             max_hours = max(len(traj) for traj in monte_carlo_results['trajectories']) - 1
@@ -537,12 +540,8 @@ def main():
                         # Use final value if trajectory ended early
                         hour_values.append(trajectory[-1])
                 avg_trajectory.append(np.mean(hour_values))
-            
-            # Calculate average profit from simulation statistics directly
-            avg_profit = monte_carlo_results['statistics']['mean_profit']
         else:
             avg_trajectory = []
-            avg_profit = 0
         
         col1, col2 = st.columns(2)
         with col1:
@@ -551,11 +550,14 @@ def main():
             st.metric("Average Actual Profit", f"${avg_profit:.2f}", 
                      delta=f"${avg_profit - total_ev:.2f}")
         
-        # First graph: Expected vs Average Actual
-        trajectory_fig = visualizer.plot_average_trajectory_vs_expected(
-            avg_trajectory, hours_played, hourly_ev, starting_bankroll
-        )
-        st.plotly_chart(trajectory_fig, use_container_width=True)
+        # First graph: Expected vs Average Actual (only if we have trajectory data)
+        if avg_trajectory and len(avg_trajectory) > 0:
+            trajectory_fig = visualizer.plot_average_trajectory_vs_expected(
+                avg_trajectory, hours_played, hourly_ev, starting_bankroll
+            )
+            st.plotly_chart(trajectory_fig, use_container_width=True)
+        else:
+            st.info("📊 Trajectory graph will appear when simulation completes successfully")
         
         # Second graph: Best vs Worst Case Analysis
         st.subheader("Best vs Worst Case Scenarios")
