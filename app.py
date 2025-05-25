@@ -444,50 +444,63 @@ def main():
         # Second row with confidence interval
         st.metric("95% Confidence Interval", f"${confidence_interval_lower:.0f} to ${confidence_interval_upper:.0f}")
         
-        # Histogram of final bankrolls
-        st.subheader("Distribution of Final Bankrolls")
-        bankroll_fig = visualizer.plot_bankroll_distribution(monte_carlo_results)
-        st.plotly_chart(bankroll_fig, use_container_width=True)
+        # Create tabbed interface for simulation analysis
+        tab1, tab2, tab3 = st.tabs(["📊 Distribution & Performance", "⚠️ Risk Analysis", "📈 Advanced Metrics"])
         
-        # Risk of Ruin for different bankrolls
-        st.subheader("Risk of Ruin Analysis")
+        with tab1:
+            # Histogram of final bankrolls
+            st.subheader("Distribution of Final Bankrolls")
+            bankroll_fig = visualizer.plot_bankroll_distribution(monte_carlo_results)
+            st.plotly_chart(bankroll_fig, use_container_width=True)
         
-        # Calculate RoR based on simulation results
-        ror_data = []
-        bankroll_percentages = [50, 75, 100, 125, 150]
-        current_bankroll = starting_bankroll
-        
-        for pct in bankroll_percentages:
-            test_bankroll = current_bankroll * pct / 100
-            # Calculate how many simulations would result in ruin at this bankroll level
-            adjusted_final_bankrolls = monte_carlo_results['final_bankrolls'] - current_bankroll + test_bankroll
-            ruin_count = np.sum(adjusted_final_bankrolls <= 0)
-            ror_percentage = (ruin_count / len(adjusted_final_bankrolls)) * 100
-            ror_data.append({"Bankroll Size": f"{pct}% of current", "Risk of Ruin": f"{ror_percentage:.1f}%"})
-        
-        # Display RoR table
-        ror_df = pd.DataFrame(ror_data)
-        st.table(ror_df)
-        
-        # Calculate N₀ (hands to be 1 SD above breakeven)
-        st.subheader("N₀ Analysis (Hands to 1 SD Above Breakeven)")
-        
-        ev_per_hand = calculator.calculate_hourly_ev() / calculator.hands_per_hour
-        variance_per_hand = (calculator.calculate_hourly_std() / calculator.hands_per_hour) ** 2
-        
-        if ev_per_hand > 0:
-            n0_hands = variance_per_hand / (ev_per_hand ** 2)
-            n0_hours = n0_hands / calculator.hands_per_hour
+        with tab2:
+            # Risk of Ruin for different bankrolls
+            st.subheader("Risk of Ruin Analysis")
+            st.write("Shows probability of losing your entire bankroll at different starting amounts:")
             
-            n0_col1, n0_col2 = st.columns(2)
-            with n0_col1:
-                st.metric("N₀ (Hands)", f"{n0_hands:,.0f}")
-            with n0_col2:
-                st.metric("N₀ (Hours)", f"{n0_hours:.1f}")
+            # Calculate RoR based on simulation results
+            ror_data = []
+            bankroll_percentages = [50, 75, 100, 125, 150]
+            current_bankroll = starting_bankroll
             
-            st.info(f"After {n0_hands:,.0f} hands ({n0_hours:.1f} hours), your expected profit will equal one standard deviation of variance. This is when skill begins to significantly outweigh luck.")
-        else:
-            st.error("Negative edge detected - N₀ calculation not applicable")
+            for pct in bankroll_percentages:
+                test_bankroll = current_bankroll * pct / 100
+                # Calculate how many simulations would result in ruin at this bankroll level
+                adjusted_final_bankrolls = monte_carlo_results['final_bankrolls'] - current_bankroll + test_bankroll
+                ruin_count = np.sum(adjusted_final_bankrolls <= 0)
+                ror_percentage = (ruin_count / len(adjusted_final_bankrolls)) * 100
+                ror_data.append({
+                    "Bankroll Size": f"{pct}% of current (${test_bankroll:,.0f})", 
+                    "Risk of Ruin": f"{ror_percentage:.1f}%"
+                })
+            
+            # Display RoR table
+            ror_df = pd.DataFrame(ror_data)
+            st.table(ror_df)
+            
+            # Add interpretation
+            st.info("💡 **Interpretation:** Lower percentages indicate safer bankroll levels. Professional players typically aim for risk of ruin below 5-10%.")
+        
+        with tab3:
+            # Calculate N₀ (hands to be 1 SD above breakeven)
+            st.subheader("N₀ Analysis (Hands to 1 SD Above Breakeven)")
+            
+            ev_per_hand = calculator.calculate_hourly_ev() / calculator.hands_per_hour
+            variance_per_hand = (calculator.calculate_hourly_std() / calculator.hands_per_hour) ** 2
+            
+            if ev_per_hand > 0:
+                n0_hands = variance_per_hand / (ev_per_hand ** 2)
+                n0_hours = n0_hands / calculator.hands_per_hour
+                
+                n0_col1, n0_col2 = st.columns(2)
+                with n0_col1:
+                    st.metric("N₀ (Hands)", f"{n0_hands:,.0f}")
+                with n0_col2:
+                    st.metric("N₀ (Hours)", f"{n0_hours:.1f}")
+                
+                st.info(f"After {n0_hands:,.0f} hands ({n0_hours:.1f} hours), your expected profit will equal one standard deviation of variance. This is when skill begins to significantly outweigh luck.")
+            else:
+                st.error("Negative edge detected - N₀ calculation not applicable")
         
         # Average trajectory analysis
         st.subheader("Average Performance vs Expected")
