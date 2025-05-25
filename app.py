@@ -676,15 +676,41 @@ def main():
                 else:
                     csv_filename = f"{num_decks}decks-{penetration_deck}penetration.csv"
                 
-                # Debug: Show detailed frequency breakdown
-                pos_count_freq = sum(freq for tc, freq in temp_calculator.count_frequencies.items() if tc > 0)
-                total_freq = sum(temp_calculator.count_frequencies.values())
-                tc6_freq = temp_calculator.count_frequencies.get(6, 0)
+                # Debug: Show detailed calculation breakdown
+                ev_per_hand = temp_calculator._calculate_ev_per_hand()
                 avg_bet = temp_calculator.avg_bet
                 edge = temp_calculator.edge
                 
+                # Calculate high positive count contribution
+                import os, csv
+                penetration_deck = temp_calculator.table_rules['penetration_deck']
+                if penetration_deck == num_decks:
+                    debug_filename = f"true count distributions/{num_decks}decks-nopenetration.csv"
+                else:
+                    debug_filename = f"true count distributions/{num_decks}decks-{penetration_deck}penetration.csv"
+                
+                high_pos_freq = 0
+                high_pos_ev_contrib = 0
+                
+                if os.path.exists(debug_filename):
+                    with open(debug_filename, 'r') as file:
+                        reader = csv.reader(file)
+                        for row in reader:
+                            if row and not row[0].startswith('#') and row[0] != 'True Count':
+                                try:
+                                    tc = int(row[0])
+                                    percentage = float(row[1])
+                                    if tc >= 6:  # High positive counts
+                                        freq = percentage / 100.0
+                                        bet = temp_calculator._get_bet_for_count(tc)
+                                        edge_val = temp_calculator._get_actual_edge_for_count(tc)
+                                        high_pos_freq += freq
+                                        high_pos_ev_contrib += edge_val * bet * freq
+                                except (ValueError, IndexError):
+                                    continue
+                
                 st.caption(f"📁 Data: {csv_filename}")
-                st.caption(f"🔍 Debug: Pos: {pos_count_freq:.1f}% | TC+6: {tc6_freq:.1f}% | Total: {total_freq:.1f}% | Avg bet: ${avg_bet:.2f} | Edge: {edge*100:.3f}%")
+                st.caption(f"🔍 EV/hand: ${ev_per_hand:.4f} | High TC≥6: {high_pos_freq*100:.2f}% | High EV contrib: ${high_pos_ev_contrib:.4f}")
         
         except Exception as e:
             with live_stats_placeholder.container():
