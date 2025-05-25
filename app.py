@@ -479,7 +479,10 @@ def main():
             for pct in bankroll_percentages:
                 test_bankroll = current_bankroll * pct / 100
                 # Calculate how many simulations would result in ruin at this bankroll level
-                adjusted_final_bankrolls = monte_carlo_results['final_bankrolls'] - current_bankroll + test_bankroll
+                # Adjust profits by the difference in starting bankroll
+                bankroll_difference = test_bankroll - current_bankroll
+                adjusted_profits = monte_carlo_results['profits'] + bankroll_difference
+                adjusted_final_bankrolls = adjusted_profits + test_bankroll
                 ruin_count = np.sum(adjusted_final_bankrolls <= 0)
                 ror_percentage = (ruin_count / len(adjusted_final_bankrolls)) * 100
                 ror_data.append({
@@ -499,9 +502,10 @@ def main():
             st.subheader("N₀ Analysis (Hands to 1 SD Above Breakeven)")
             
             ev_per_hand = calculator.calculate_hourly_ev() / calculator.hands_per_hour
-            variance_per_hand = (calculator.calculate_hourly_std() / calculator.hands_per_hour) ** 2
+            std_per_hand = calculator.calculate_hourly_std() / np.sqrt(calculator.hands_per_hour)
+            variance_per_hand = std_per_hand ** 2
             
-            if ev_per_hand > 0:
+            if ev_per_hand > 0 and variance_per_hand > 0:
                 n0_hands = variance_per_hand / (ev_per_hand ** 2)
                 n0_hours = n0_hands / calculator.hands_per_hour
                 
@@ -583,6 +587,7 @@ def main():
         
         with risk_col2:
             st.write("**Bankroll Adequacy:**")
+            recommended_bankroll = calculator.calculate_recommended_bankroll()
             if recommended_bankroll != float('inf'):
                 bankroll_adequacy = (starting_bankroll / recommended_bankroll) * 100
                 st.write(f"- Recommended: ${recommended_bankroll:.2f}")
