@@ -1,0 +1,140 @@
+🔍 Root Problem
+You're getting 0% risk of ruin because your exponent in the formula:
+
+python
+Copy
+Edit
+ror = math.exp(exponent) * 100
+...is likely a large negative number due to:
+
+python
+Copy
+Edit
+exponent = -2 * weighted_edge * betting_units / empirical_variance
+If the exponent is lower than -15 or so, then exp(exponent) becomes almost zero, and ror rounds to 0.0% after * 100.
+
+But in reality, there is always some small risk of ruin, especially with moderate bankrolls like $5k. Even pro counters can see 1–5% risk depending on conditions.
+
+✅ Key Fixes to Implement
+Here’s how to make this calculation reflect reality:
+
+1. Add Lower Bound to RoR
+Make sure RoR never shows 0% unless the edge or bet is 0.
+
+🔧 Replace:
+
+python
+Copy
+Edit
+return round(min(ror, 100.0), 1)
+✅ With:
+
+python
+Copy
+Edit
+ror = min(ror, 100.0)
+ror = max(ror, 0.1)  # Ensure at least 0.1% if edge > 0
+return round(ror, 1)
+2. Log the exponent value for debugging
+Print the exponent to confirm whether it's producing extremely small numbers:
+
+python
+Copy
+Edit
+print(f"Weighted edge: {weighted_edge:.4f}")
+print(f"Betting units: {betting_units:.1f}")
+print(f"Exponent: {exponent:.2f}")
+If your exponent is -40, for example, your RoR is essentially zero.
+
+3. Consider Using a Log-Based Alternative
+A more stable version of the gambler’s ruin formula sometimes used is:
+
+ini
+Copy
+Edit
+RoR = ((1 - edge / variance) / (1 + edge / variance)) ^ betting_units
+This reduces underflow in exponential values.
+
+You could replace:
+
+python
+Copy
+Edit
+exponent = -2 * weighted_edge * betting_units / empirical_variance
+ror = math.exp(exponent) * 100
+With:
+
+python
+Copy
+Edit
+a = (1 - weighted_edge / empirical_variance) / (1 + weighted_edge / empirical_variance)
+ror = (a ** betting_units) * 100
+And still cap it:
+
+python
+Copy
+Edit
+ror = min(ror, 100.0)
+ror = max(ror, 0.1)
+return round(ror, 1)
+🔁 Example Correction of Your Method
+Here's the corrected full method:
+
+python
+Copy
+Edit
+def calculate_risk_of_ruin(self, hours_played):
+    """
+    Calculate risk of ruin using proper bet-weighted edge and realistic variance.
+    """
+    # Calculate bet-weighted edge
+    total_weighted_edge = 0
+    total_bet_amount = 0
+
+    for true_count, frequency in self.count_frequencies.items():
+        edge = self.count_edges.get(true_count, 0)
+        bet_amount = self._get_bet_for_count(true_count)
+
+        if bet_amount > 0:
+            total_weighted_edge += edge * bet_amount * frequency
+            total_bet_amount += bet_amount * frequency
+
+    if total_bet_amount == 0:
+        return 100.0
+
+    weighted_edge = total_weighted_edge / total_bet_amount
+    if weighted_edge <= 0:
+        return 100.0
+
+    total_frequency = sum(self.count_frequencies.values())
+    average_bet = total_bet_amount / total_frequency if total_frequency > 0 else 0
+    if average_bet <= 0:
+        return 100.0
+
+    betting_units = self.starting_bankroll / average_bet
+    empirical_variance = 1.6  # realistic for modern blackjack
+
+    # Improved, stable RoR formula
+    a = (1 - weighted_edge / empirical_variance) / (1 + weighted_edge / empirical_variance)
+    ror = (a ** betting_units) * 100
+
+    # Clamp range
+    ror = min(ror, 100.0)
+    ror = max(ror, 0.1)
+    return round(ror, 1)
+🔍 Optional: Add Logging (For Debugging)
+python
+Copy
+Edit
+print(f"Weighted edge: {weighted_edge:.4f}")
+print(f"Average bet: {average_bet:.2f}")
+print(f"Betting units: {betting_units:.1f}")
+print(f"Raw RoR: {ror:.2f}%")
+✅ Summary
+Your result of 0% comes from exponent underflow.
+
+Add a lower bound (e.g. 0.1%).
+
+Consider using the stable log-based gambler's ruin formula instead of exp().
+
+Print internal values to verify realism.

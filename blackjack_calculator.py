@@ -360,13 +360,19 @@ class BlackjackCalculator:
         # Higher variance for strategies with bet spreads due to more aggressive play at high counts
         empirical_variance = 1.6  # More realistic than 1.3 for modern games with full basic strategy
         
-        # Risk of ruin formula: RoR = exp(-2 * edge * units / variance)
-        exponent = -2 * weighted_edge * betting_units / empirical_variance
+        # Use stable log-based gambler's ruin formula to avoid underflow
+        # RoR = ((1 - edge/variance) / (1 + edge/variance))^betting_units
+        a = (1 - weighted_edge / empirical_variance) / (1 + weighted_edge / empirical_variance)
+        ror = (a ** betting_units) * 100
         
-        # Calculate natural risk without artificial bounds
-        ror = math.exp(exponent) * 100
+        # Debug output to verify calculations
+        print(f"DEBUG RoR: weighted_edge={weighted_edge:.4f}, avg_bet={average_bet:.2f}, betting_units={betting_units:.1f}, raw_ror={ror:.2f}%")
         
-        return round(min(ror, 100.0), 1)
+        # Clamp to realistic range - never 0% for positive edge scenarios
+        ror = min(ror, 100.0)
+        ror = max(ror, 0.1)  # Minimum 0.1% risk for realistic scenarios
+        
+        return round(ror, 1)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""
