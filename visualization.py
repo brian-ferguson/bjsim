@@ -23,12 +23,12 @@ class Visualizer:
         }
     
     def plot_expected_value_over_time(self, hours_played: int, hourly_ev: float, 
-                                    hourly_std: float) -> go.Figure:
+                                    hourly_std: float, starting_bankroll: float = 1000) -> go.Figure:
         """
-        Plot expected value over time with confidence intervals.
+        Plot expected value over time with confidence intervals starting from bankroll.
         """
         hours = np.arange(0, hours_played + 1)
-        cumulative_ev = hours * hourly_ev
+        cumulative_ev = starting_bankroll + (hours * hourly_ev)
         
         # Calculate confidence intervals (95%)
         cumulative_std = np.sqrt(hours) * hourly_std
@@ -57,14 +57,14 @@ class Visualizer:
             line=dict(color=self.colors['primary'], width=3)
         ))
         
-        # Add break-even line
-        fig.add_hline(y=0, line_dash="dash", line_color="gray", 
-                     annotation_text="Break Even")
+        # Add starting bankroll line
+        fig.add_hline(y=starting_bankroll, line_dash="dash", line_color="gray", 
+                     annotation_text="Starting Bankroll")
         
         fig.update_layout(
-            title='Expected Value Over Time',
+            title='Expected Bankroll Over Time',
             xaxis_title='Hours Played',
-            yaxis_title='Cumulative Profit ($)',
+            yaxis_title='Bankroll ($)',
             hovermode='x unified',
             showlegend=True
         )

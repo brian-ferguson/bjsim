@@ -359,7 +359,7 @@ def main():
         # Expected value over time
         st.subheader("Expected Value Over Time")
         ev_fig = visualizer.plot_expected_value_over_time(
-            hours_played, hourly_ev, calculator.calculate_hourly_std()
+            hours_played, hourly_ev, calculator.calculate_hourly_std(), starting_bankroll
         )
         st.plotly_chart(ev_fig, use_container_width=True)
         
