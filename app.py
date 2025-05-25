@@ -676,12 +676,15 @@ def main():
                 else:
                     csv_filename = f"{num_decks}decks-{penetration_deck}penetration.csv"
                 
-                # Debug: Show positive count frequencies
+                # Debug: Show detailed frequency breakdown
                 pos_count_freq = sum(freq for tc, freq in temp_calculator.count_frequencies.items() if tc > 0)
+                total_freq = sum(temp_calculator.count_frequencies.values())
+                tc6_freq = temp_calculator.count_frequencies.get(6, 0)
                 avg_bet = temp_calculator.avg_bet
                 edge = temp_calculator.edge
                 
-                st.caption(f"📁 Data: {csv_filename} | Pos counts: {pos_count_freq:.1f}% | Avg bet: ${avg_bet:.2f} | Edge: {edge*100:.3f}%")
+                st.caption(f"📁 Data: {csv_filename}")
+                st.caption(f"🔍 Debug: Pos: {pos_count_freq:.1f}% | TC+6: {tc6_freq:.1f}% | Total: {total_freq:.1f}% | Avg bet: ${avg_bet:.2f} | Edge: {edge*100:.3f}%")
         
         except Exception as e:
             with live_stats_placeholder.container():

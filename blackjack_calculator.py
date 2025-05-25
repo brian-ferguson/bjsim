@@ -174,10 +174,11 @@ class BlackjackCalculator:
         """
         Calculate player edge for each true count based on simulation data.
         Applies table rules adjustments to professional edge values.
+        For extreme counts, we need to use realistic edges, not just clamp to TC +6.
         """
         # Base edges from professional simulation data (6-deck, H17 baseline)
         base_edges = {
-            -3: -0.006,  # -0.6%
+            -3: -0.006,  # -0.6% (includes all counts <= -3)
             -2: -0.005,  # -0.5%
             -1: -0.004,  # -0.4%
              0: -0.003,  # -0.3%
@@ -186,7 +187,7 @@ class BlackjackCalculator:
              3:  0.015,  # +1.5%
              4:  0.020,  # +2.0%
              5:  0.022,  # +2.2%
-             6:  0.023,  # +2.3%
+             6:  0.025,  # +2.5% (represents average edge for all counts >= +6)
         }
         
         # Calculate rule adjustments (difference from baseline)
