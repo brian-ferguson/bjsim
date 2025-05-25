@@ -507,12 +507,8 @@ def main():
                 percentage = (count / total_sims) * 100
                 st.write(f"• {range_name}: {percentage:.1f}% ({count:,} players)")
             
-            # Display RoR table
-            ror_df = pd.DataFrame(ror_data)
-            st.table(ror_df)
-            
             # Add interpretation
-            st.info("💡 **Interpretation:** Lower percentages indicate safer bankroll levels. Professional players typically aim for risk of ruin below 5-10%.")
+            st.info("💡 **Interpretation:** These percentages show the distribution of outcomes from your simulation. The actual risk of ruin shown above reflects real playing conditions.")
         
         with tab3:
             # Calculate N₀ (hands to be 1 SD above breakeven)
