@@ -137,19 +137,19 @@ class BlackjackCalculator:
                             except (ValueError, IndexError):
                                 continue
                 
-                # Filter to our range of interest (-3 to +6)
+                # Filter to our range of interest (-3 to +6) but DON'T normalize
+                # Keep the actual frequencies as they represent real probability
                 filtered_frequencies = {}
                 for tc in range(-3, 7):
                     if tc in frequencies:
-                        filtered_frequencies[tc] = frequencies[tc]
+                        # Use actual frequency from CSV (already in percentage form)
+                        filtered_frequencies[tc] = frequencies[tc] / 100.0
                     else:
                         # Use a small default value for missing counts
-                        filtered_frequencies[tc] = 0.001
+                        filtered_frequencies[tc] = 0.0001
                 
-                # Normalize to ensure they sum to 1.0
-                total = sum(filtered_frequencies.values())
-                if total > 0:
-                    return {tc: freq/total for tc, freq in filtered_frequencies.items()}
+                # Don't normalize - use actual frequencies from simulation data
+                return filtered_frequencies
                     
             except Exception as e:
                 print(f"Error loading CSV {filename}: {e}")
