@@ -478,13 +478,11 @@ def main():
             
             for pct in bankroll_percentages:
                 test_bankroll = current_bankroll * pct / 100
-                # Calculate how many simulations would result in ruin at this bankroll level
-                # Adjust profits by the difference in starting bankroll
-                bankroll_difference = test_bankroll - current_bankroll
-                adjusted_profits = monte_carlo_results['profits'] + bankroll_difference
-                adjusted_final_bankrolls = adjusted_profits + test_bankroll
-                ruin_count = np.sum(adjusted_final_bankrolls <= 0)
-                ror_percentage = (ruin_count / len(adjusted_final_bankrolls)) * 100
+                # Scale the simulation results proportionally to the test bankroll
+                scale_factor = test_bankroll / current_bankroll
+                scaled_final_bankrolls = monte_carlo_results['final_bankrolls'] * scale_factor
+                ruin_count = np.sum(scaled_final_bankrolls <= 0)
+                ror_percentage = (ruin_count / len(scaled_final_bankrolls)) * 100
                 ror_data.append({
                     "Bankroll Size": f"{pct}% of current (${test_bankroll:,.0f})", 
                     "Risk of Ruin": f"{ror_percentage:.1f}%"

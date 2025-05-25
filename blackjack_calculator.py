@@ -376,13 +376,19 @@ class BlackjackCalculator:
         # Risk of ruin formula: RoR = exp(-2 * edge * units / variance)
         if betting_units > 0 and variance_per_unit > 0:
             exponent = -2 * weighted_average_edge * betting_units / variance_per_unit
-            # Prevent numerical overflow/underflow
-            exponent = max(min(exponent, 50), -50)
-            ror = math.exp(exponent) * 100
+            # Prevent numerical overflow/underflow and ensure reasonable minimums
+            if exponent < -10:  # Very low risk, but show minimum 0.01%
+                ror = 0.01
+            elif exponent > 0:  # Negative edge scenario
+                ror = 100.0
+            else:
+                ror = math.exp(exponent) * 100
+                # Ensure minimum display of 0.01% for very low risk
+                ror = max(ror, 0.01)
         else:
             ror = 100.0
         
-        return min(max(ror, 0.0), 100.0)
+        return min(ror, 100.0)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""
