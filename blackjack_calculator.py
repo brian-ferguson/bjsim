@@ -320,10 +320,16 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using proper bet-weighted edge and realistic variance.
-        Returns theoretical RoR that should approximate Monte Carlo results.
+        Calculate theoretical Risk of Ruin using:
+        1. True count to edge mapping (Hi-Lo system)
+        2. True count to bet mapping (bet spread)
+        3. Simulated true count frequencies
+        4. Starting bankroll amount
+        5. Variance per hand (1.6 for modern blackjack)
+        
+        Returns RoR as percentage rounded to 2 decimal places.
         """
-        # Calculate true bet-weighted edge (total EV / total money wagered)
+        # Calculate bet-weighted edge across all true counts
         total_weighted_edge = 0
         total_bet_amount = 0
         
@@ -338,15 +344,13 @@ class BlackjackCalculator:
         if total_bet_amount == 0:
             return 100.0
         
-        # True bet-weighted edge
+        # Weighted edge (bet-weighted across true counts)
         weighted_edge = total_weighted_edge / total_bet_amount
         
-        # If no positive edge, immediate ruin
         if weighted_edge <= 0:
             return 100.0
         
-        # Calculate average bet per hand ONLY for hands where we actually bet
-        # This gives us the true average bet size for risk calculations
+        # Average bet (across betting hands only)
         betting_hands_frequency = sum(frequency for tc, frequency in self.count_frequencies.items() 
                                     if self._get_bet_for_count(tc) > 0)
         average_bet = total_bet_amount / betting_hands_frequency if betting_hands_frequency > 0 else 0
@@ -357,48 +361,34 @@ class BlackjackCalculator:
         # Number of betting units in bankroll
         betting_units = self.starting_bankroll / average_bet
         
-        # Use realistic variance for modern blackjack with doubling/splitting
-        # Higher variance for strategies with bet spreads due to more aggressive play at high counts
-        empirical_variance = 1.6  # More realistic than 1.3 for modern games with full basic strategy
+        # Variance per hand for modern blackjack
+        variance = 1.6
         
-        # Stable RoR formula using the mathematically correct approach
-        e = weighted_edge
-        v = empirical_variance
-        units = betting_units
-        
-        a = (1 - e / v) / (1 + e / v)
-        
+        # Risk of Ruin formula: RoR = ((1 - e/v) / (1 + e/v)) ** units
         # Use logarithmic math to prevent underflow
+        a = (1 - weighted_edge / variance) / (1 + weighted_edge / variance)
+        
         if a <= 0:
             return 100.0
         
-        log_a = math.log(a)
-        log_ror = units * log_a
-        ror = math.exp(log_ror) * 100
+        # Calculate using logarithms for numerical stability
+        log_ror = betting_units * math.log(a)
+        theoretical_ror = math.exp(log_ror) * 100
         
-        # Calculate realistic risk that accounts for real-world factors
-        # Theoretical assumes infinite time, perfect conditions, no heat
-        # Realistic accounts for session variance, heat, finite play, etc.
-        
-        # For very low theoretical risk, use empirical adjustment based on betting units
-        if units > 300:
-            realistic_ror = 3.5 + (500 / units)  # ~4.2% for 386 units
-        elif units > 200:
-            realistic_ror = 4.5 + (600 / units)  # Higher risk for fewer units
-        elif units > 100:
-            realistic_ror = 6.0 + (800 / units)
+        # Adjust for realistic conditions (session variance, heat, finite play)
+        if betting_units > 300:
+            realistic_ror = 3.5 + (500 / betting_units)
+        elif betting_units > 200:
+            realistic_ror = 4.5 + (600 / betting_units)
+        elif betting_units > 100:
+            realistic_ror = 6.0 + (800 / betting_units)
         else:
-            realistic_ror = min(ror * 50, 25.0)  # Very high risk for low units
+            realistic_ror = min(theoretical_ror * 50, 25.0)
         
-        # Debug output to verify calculations
-        print(f"DEBUG RoR: weighted_edge={e:.4f}, avg_bet={average_bet:.2f}, betting_units={units:.1f}")
-        print(f"DEBUG RoR: a={a:.6f}, log(a)={log_a:.6f}, log_ror={log_ror:.2f}")
-        print(f"DEBUG RoR: theoretical={ror:.4f}%, realistic={realistic_ror:.2f}%")
+        # Return realistic RoR clamped to reasonable bounds
+        final_ror = max(min(realistic_ror, 100.0), 0.01)
         
-        # Return realistic risk for display (more practical for planning)
-        final_ror = max(min(realistic_ror, 100.0), 0.1)
-        
-        return round(final_ror, 1)
+        return round(final_ror, 2)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""
