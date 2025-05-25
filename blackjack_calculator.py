@@ -339,32 +339,35 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using the correct formula for dollar-based betting.
-        Uses Kelly Criterion approach for accurate risk assessment.
+        Calculate risk of ruin using the correct formula for card counting.
+        Uses standard deviation and advantage to determine ruin probability.
         """
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Calculate average bet size (in dollars)
-        avg_bet_dollars = self._calculate_average_bet()
+        # Calculate total hands over the session
+        total_hands = hours_played * self.hands_per_hour
         
-        # Convert edge to edge per dollar bet
-        edge_per_dollar = self.edge / avg_bet_dollars if avg_bet_dollars > 0 else 0
+        # Calculate total expected value and standard deviation
+        total_ev = self.calculate_hourly_ev() * hours_played
+        total_std = self.calculate_hourly_std() * math.sqrt(hours_played)
         
-        # Calculate variance per dollar bet (standard deviation squared)
-        variance_per_dollar = self.std_dev_per_hand ** 2
-        
-        # Number of betting units in bankroll
-        betting_units = self.starting_bankroll / avg_bet_dollars if avg_bet_dollars > 0 else 0
-        
-        # Risk of ruin formula for advantage play: exp(-2 * edge_per_unit * units / variance_per_unit)
-        if betting_units > 0 and variance_per_dollar > 0:
-            exponent = -2 * edge_per_dollar * betting_units / variance_per_dollar
-            ror = math.exp(exponent) * 100
+        # Risk of ruin: probability that losses exceed starting bankroll
+        # Using normal approximation: P(final bankroll < 0) = P(Z < -bankroll/std)
+        if total_std > 0:
+            z_score = -(self.starting_bankroll + total_ev) / total_std
+            # Convert z-score to probability (normal CDF approximation)
+            if z_score > 6:
+                ror = 100.0
+            elif z_score < -6:
+                ror = 0.0
+            else:
+                # Normal CDF approximation
+                ror = 50.0 * (1 + math.erf(z_score / math.sqrt(2))) * 100
         else:
             ror = 0.0
         
-        return min(ror, 100.0)  # Cap at 100%
+        return min(max(ror, 0.0), 100.0)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""

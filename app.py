@@ -452,22 +452,18 @@ def main():
         # Risk of Ruin for different bankrolls
         st.subheader("Risk of Ruin Analysis")
         
-        # Calculate RoR for different bankroll percentages
+        # Calculate RoR based on simulation results
         ror_data = []
         bankroll_percentages = [50, 75, 100, 125, 150]
-        recommended_bankroll = calculator.calculate_recommended_bankroll()
+        current_bankroll = starting_bankroll
         
         for pct in bankroll_percentages:
-            test_bankroll = (recommended_bankroll * pct / 100) if recommended_bankroll != float('inf') else starting_bankroll * pct / 100
-            # Create temporary calculator with different bankroll
-            temp_calculator = BlackjackCalculator(
-                num_decks=num_decks,
-                starting_bankroll=test_bankroll,
-                hands_per_hour=hands_per_hour,
-                betting_strategy=st.session_state.betting_strategy
-            )
-            temp_ror = temp_calculator.calculate_risk_of_ruin(hours_played)
-            ror_data.append({"Bankroll Size": f"{pct}% of recommended", "Risk of Ruin": f"{temp_ror:.1f}%"})
+            test_bankroll = current_bankroll * pct / 100
+            # Calculate how many simulations would result in ruin at this bankroll level
+            adjusted_final_bankrolls = monte_carlo_results['final_bankrolls'] - current_bankroll + test_bankroll
+            ruin_count = np.sum(adjusted_final_bankrolls <= 0)
+            ror_percentage = (ruin_count / len(adjusted_final_bankrolls)) * 100
+            ror_data.append({"Bankroll Size": f"{pct}% of current", "Risk of Ruin": f"{ror_percentage:.1f}%"})
         
         # Display RoR table
         ror_df = pd.DataFrame(ror_data)
@@ -496,20 +492,13 @@ def main():
         # Average trajectory analysis
         st.subheader("Average Performance vs Expected")
         
-        # Calculate average trajectory across all simulations
-        max_hours = len(monte_carlo_results['trajectories'][0]) - 1
-        avg_trajectory = []
+        # Use the pre-calculated average trajectory from Monte Carlo results
+        avg_trajectory = monte_carlo_results.get('avg_trajectory', [])
         
-        for hour in range(max_hours + 1):
-            hour_values = []
-            for trajectory in monte_carlo_results['trajectories']:
-                if hour < len(trajectory):
-                    hour_values.append(trajectory[hour])
-                else:
-                    hour_values.append(0)  # Ruined simulations
-            avg_trajectory.append(np.mean(hour_values))
-        
-        avg_profit = avg_trajectory[-1] - starting_bankroll
+        if avg_trajectory:
+            avg_profit = avg_trajectory[-1] - starting_bankroll
+        else:
+            avg_profit = 0
         
         col1, col2 = st.columns(2)
         with col1:

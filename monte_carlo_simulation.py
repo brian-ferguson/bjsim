@@ -120,9 +120,34 @@ class MonteCarloSimulation:
         # Calculate statistics
         profits = [fb - self.calculator.starting_bankroll for fb in final_bankrolls]
         
+        # Calculate average trajectory across all simulations
+        max_length = max(len(traj) for traj in trajectories) if trajectories else 0
+        avg_trajectory = []
+        if max_length > 0:
+            for hour in range(max_length):
+                hour_values = []
+                for traj in trajectories:
+                    if hour < len(traj):
+                        hour_values.append(traj[hour])
+                    else:
+                        # Use final value if trajectory ended early
+                        hour_values.append(traj[-1])
+                avg_trajectory.append(np.mean(hour_values))
+        
+        # Find best and worst trajectories for analysis
+        best_trajectory = trajectories[np.argmax(final_bankrolls)] if trajectories else []
+        worst_trajectory = trajectories[np.argmin(final_bankrolls)] if trajectories else []
+        
+        # Calculate actual average edge experienced across all simulations
+        total_actual_edges = [r.get('actual_avg_edge', 0) for r in results]
+        mean_actual_edge = np.mean(total_actual_edges) if total_actual_edges else 0
+        
         aggregated_results = {
             'final_bankrolls': np.array(final_bankrolls),
             'trajectories': trajectories,
+            'avg_trajectory': avg_trajectory,
+            'best_trajectory': best_trajectory,
+            'worst_trajectory': worst_trajectory,
             'profits': np.array(profits),
             'max_bankrolls': np.array(max_bankrolls),
             'min_bankrolls': np.array(min_bankrolls),
@@ -134,7 +159,8 @@ class MonteCarloSimulation:
                 'max_profit': np.max(profits),
                 'prob_profit': np.mean(np.array(profits) > 0),
                 'prob_ruin': np.mean(np.array(final_bankrolls) <= 0),
-                'prob_double': np.mean(np.array(final_bankrolls) >= 2 * self.calculator.starting_bankroll)
+                'prob_double': np.mean(np.array(final_bankrolls) >= 2 * self.calculator.starting_bankroll),
+                'mean_actual_edge': mean_actual_edge
             }
         }
         
