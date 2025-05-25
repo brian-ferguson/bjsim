@@ -62,36 +62,44 @@ class BlackjackCalculator:
     def _calculate_base_house_edge(self):
         """
         Calculate base house edge based on table rules.
-        Based on composition-dependent basic strategy.
+        Uses professional estimates for rule impact on EV.
         """
-        base_edge = 0.005  # Start with basic 6-deck H17 edge
+        # Start with baseline 6-deck H17 house edge
+        base_edge = 0.006  # ~0.6% baseline house edge
         
-        # Adjust for dealer rules
-        if self.game_rules['dealer_hits_soft_17']:
-            base_edge += 0.0022  # H17 increases house edge
+        # Apply rule adjustments based on professional estimates
+        # Dealer rules
+        if not self.game_rules['dealer_hits_soft_17']:  # S17
+            base_edge -= 0.002  # Dealer stands on soft 17: +0.2% for player
         
-        # Adjust for player-favorable rules
+        # Player-favorable rules
         if self.game_rules['double_after_split']:
-            base_edge -= 0.0014  # DAS reduces house edge
+            base_edge -= 0.0013  # DAS: +0.13% for player
         
         if self.game_rules['late_surrender']:
-            base_edge -= 0.0008  # Late surrender reduces house edge
+            base_edge -= 0.0009  # Late surrender: +0.08-0.1% for player
         
         if self.game_rules['can_split_aces']:
-            base_edge -= 0.0005  # Split aces reduces house edge
-            
-        if self.game_rules['resplit_aces']:
-            base_edge -= 0.0003  # Resplit aces further reduces edge
+            if self.game_rules['resplit_aces']:
+                base_edge -= 0.0008  # RSA: +0.07-0.1% for player
+            # If no RSA but can split aces once, assume standard rules (no additional adjustment)
+        else:
+            base_edge += 0.0018  # No splitting aces: -0.18% for player
         
-        # Adjust for number of decks (more decks = worse for player)
+        # Multiple splits beyond 2 hands
+        if self.game_rules['max_splits'] > 2:
+            extra_splits = self.game_rules['max_splits'] - 2
+            base_edge -= (extra_splits * 0.00015)  # +0.01-0.02% per extra hand
+        
+        # Deck count adjustments (industry standard)
         if self.num_decks == 1:
-            base_edge -= 0.0048
+            base_edge -= 0.0048  # Single deck advantage
         elif self.num_decks == 2:
-            base_edge -= 0.0025
+            base_edge -= 0.0025  # Double deck advantage
         elif self.num_decks == 4:
-            base_edge -= 0.0006
+            base_edge -= 0.0006  # Four deck slight advantage
         elif self.num_decks == 8:
-            base_edge += 0.0002
+            base_edge += 0.0002  # Eight deck slight disadvantage
         
         return max(base_edge, 0.001)  # Minimum 0.1% house edge
     
@@ -155,9 +163,9 @@ class BlackjackCalculator:
     def _calculate_count_edges(self):
         """
         Calculate player edge for each true count based on simulation data.
-        Uses professional simulation values for 6-deck, H17, 83% penetration.
+        Applies table rules adjustments to professional edge values.
         """
-        # Base edges from professional simulation data
+        # Base edges from professional simulation data (6-deck, H17 baseline)
         base_edges = {
             -3: -0.006,  # -0.6%
             -2: -0.005,  # -0.5%
@@ -171,20 +179,33 @@ class BlackjackCalculator:
              6:  0.023,  # +2.3%
         }
         
-        # Adjust for table rules
+        # Calculate rule adjustments (difference from baseline)
+        rule_adjustment = self.base_house_edge - 0.006  # Difference from 6-deck H17 baseline
+        
+        # Apply rule adjustments to all true counts
         edges = {}
         for tc, base_edge in base_edges.items():
-            edge = base_edge
+            # Apply the rule adjustment to shift all edges
+            adjusted_edge = base_edge - rule_adjustment
             
-            # Adjust for favorable rules (only for positive counts)
+            # Additional adjustments for specific rules at positive counts
             if tc > 0:
+                # Late surrender is most valuable at high counts
                 if self.game_rules['late_surrender']:
-                    edge += 0.001  # Surrender adds ~0.1% at high counts
+                    surrender_bonus = min(tc * 0.0002, 0.0008)  # Scales with TC, max 0.08%
+                    adjusted_edge += surrender_bonus
                 
+                # DAS provides slight advantage across positive counts
                 if self.game_rules['double_after_split']:
-                    edge += 0.0005  # DAS adds slight advantage
+                    das_bonus = min(tc * 0.0001, 0.0003)  # Scales with TC, max 0.03%
+                    adjusted_edge += das_bonus
+                
+                # RSA provides small advantage at positive counts
+                if self.game_rules['can_split_aces'] and self.game_rules['resplit_aces']:
+                    rsa_bonus = min(tc * 0.00005, 0.0002)  # Scales with TC, max 0.02%
+                    adjusted_edge += rsa_bonus
             
-            edges[tc] = edge
+            edges[tc] = adjusted_edge
         
         return edges
     

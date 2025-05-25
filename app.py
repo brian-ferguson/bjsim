@@ -260,23 +260,7 @@ def main():
         # Show calculated edge and betting strategy summary
         st.info(f"**Calculated Edge**: {calculator.edge*100:.3f}% (weighted by bet size and count frequencies)")
         
-        # Show current game rules
-        with st.expander("🎲 Game Rules (OLG Blackjack)"):
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write("**Current Rule Set:**")
-                st.write(f"- Decks: {calculator.game_rules['decks']}")
-                st.write(f"- Dealer hits soft 17: {'Yes' if calculator.game_rules['dealer_hits_soft_17'] else 'No'}")
-                st.write(f"- Blackjack payout: {calculator.game_rules['blackjack_payout']}:1")
-                st.write(f"- Double any two cards: {'Yes' if calculator.game_rules['double_any_two'] else 'No'}")
-                st.write(f"- Double after split: {'Yes' if calculator.game_rules['double_after_split'] else 'No'}")
-            with col2:
-                st.write("**Additional Rules:**")
-                st.write(f"- Resplit aces: {'Yes' if calculator.game_rules['resplit_aces'] else 'No'}")
-                st.write(f"- Late surrender: {'Yes' if calculator.game_rules['late_surrender'] else 'No'}")
-                st.write(f"- European no hole card: {'Yes' if calculator.game_rules['european_no_hole_card'] else 'No'}")
-                st.write(f"- Insurance offered: {'Yes' if calculator.game_rules['insurance_offered'] else 'No'}")
-                st.write(f"- **Base house edge: {calculator.base_house_edge*100:.1f}%**")
+
 
         # Show CSV data and calculations
         with st.expander("📊 CSV Data & Edge Breakdown"):
