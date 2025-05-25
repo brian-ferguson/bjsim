@@ -269,21 +269,60 @@ class BlackjackCalculator:
         
         return total_bet / total_freq if total_freq > 0 else 0
     
+    def _get_actual_edge_for_count(self, true_count):
+        """
+        Get the actual edge for any true count, including extreme values.
+        Don't clamp edge values - use realistic edges for extreme counts.
+        """
+        if true_count <= -3:
+            return self.count_edges[-3]  # Use TC-3 edge for very negative counts
+        elif true_count >= 6:
+            # For very high counts, use escalating edge (roughly +0.5% per TC above +6)
+            extra_counts = true_count - 6
+            base_edge = self.count_edges[6]  # +2.5% for TC+6
+            return base_edge + (extra_counts * 0.005)  # +0.5% per additional TC
+        else:
+            return self.count_edges[true_count]
+    
     def _calculate_ev_per_hand(self):
         """
-        Calculate EV per hand as weighted average of (edge × bet) over all counts.
-        This avoids the mismatch between weighted edge and average bet calculations.
+        Calculate EV per hand using actual CSV frequencies and proper edge values.
+        This properly handles extreme counts without artificial clamping.
         """
         total_ev = 0
         total_freq = 0
         
-        for true_count, frequency in self.count_frequencies.items():
-            edge = self.count_edges[true_count]
-            bet_amount = self._get_bet_for_count(true_count)
-            
-            # Include ALL counts (even zero bets) in the calculation
-            total_ev += edge * bet_amount * frequency
-            total_freq += frequency
+        # Load the original CSV frequencies (not the mapped ones)
+        import os
+        import csv
+        
+        penetration_deck = self.table_rules['penetration_deck']
+        
+        if penetration_deck == self.num_decks:
+            filename = f"true count distributions/{self.num_decks}decks-nopenetration.csv"
+        else:
+            filename = f"true count distributions/{self.num_decks}decks-{penetration_deck}penetration.csv"
+        
+        if os.path.exists(filename):
+            with open(filename, 'r') as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    if row and not row[0].startswith('#') and row[0] != 'True Count':
+                        try:
+                            true_count = int(row[0])
+                            percentage = float(row[1])
+                            frequency = percentage / 100.0
+                            
+                            # Get edge and bet for this exact count
+                            edge = self._get_actual_edge_for_count(true_count)
+                            bet_amount = self._get_bet_for_count(true_count)
+                            
+                            # Add to total EV calculation
+                            total_ev += edge * bet_amount * frequency
+                            total_freq += frequency
+                            
+                        except (ValueError, IndexError):
+                            continue
         
         return total_ev / total_freq if total_freq > 0 else 0
     
