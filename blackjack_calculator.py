@@ -345,9 +345,10 @@ class BlackjackCalculator:
         if weighted_edge <= 0:
             return 100.0
         
-        # Calculate accurate average bet (total money wagered / total hands played)
-        total_hands = sum(self.count_frequencies.values())
-        average_bet = total_bet_amount / total_hands if total_hands > 0 else 0
+        # Calculate average bet per hand (including hands where we sit out)
+        # total_bet_amount is sum of (bet * frequency), we need to divide by total frequency
+        total_frequency = sum(self.count_frequencies.values())
+        average_bet = total_bet_amount / total_frequency if total_frequency > 0 else 0
         
         if average_bet <= 0:
             return 100.0
