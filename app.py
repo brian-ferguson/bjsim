@@ -710,7 +710,7 @@ def main():
                                     continue
                 
                 st.caption(f"📁 Data: {csv_filename}")
-                st.caption(f"🔍 EV/hand: ${ev_per_hand:.4f} | High TC≥6: {high_pos_freq*100:.2f}% | High EV contrib: ${high_pos_ev_contrib:.4f}")
+                st.caption(f"🔍 EV/hand: ${ev_per_hand:.4f} | High TC6+: {high_pos_freq*100:.2f} percent | High EV contrib: ${high_pos_ev_contrib:.4f}")
         
         except Exception as e:
             with live_stats_placeholder.container():
