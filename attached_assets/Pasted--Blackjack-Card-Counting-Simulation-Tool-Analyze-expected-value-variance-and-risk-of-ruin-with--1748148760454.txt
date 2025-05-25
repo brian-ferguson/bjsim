@@ -1,0 +1,183 @@
+♠️ Blackjack Card Counting Simulation Tool
+Analyze expected value, variance, and risk of ruin with Monte Carlo analysis
+
+📊 Live Strategy Analysis
+Expected Value/Hour
+
+$10.20
+1.85% edge
+Standard Deviation/Hour
+
+$9.05
+±0.9x EV
+Risk of Ruin
+
+0.1%
+🟢 100h play
+Hours to 2x Bankroll
+
+490h
+20.4 days
+📁 Data: 6decks-nopenetration.csv
+
+🔍 EV/hand: 
+0.1020
+∣
+H
+i
+g
+h
+T
+C
+6
++
+:
+4.91
+p
+e
+r
+c
+e
+n
+t
+∣
+H
+i
+g
+h
+E
+V
+c
+o
+n
+t
+r
+i
+b
+:
+0.1020∣HighTC6+:4.91percent∣HighEVcontrib:0.0417
+
+🎲 Table Rules Configuration
+
+🎰 Game Setup
+
+
+👤 Player Options
+
+
+📊 Data Source
+
+Basic Game Configuration
+Number of Decks
+
+6
+Penetration
+
+6 decks (100.0%)
+Dealer on Soft 17
+
+Hits
+Hands per Hour
+
+100
+📊 Simulation Results
+Calculated Edge: 1.853% (weighted by bet size and count frequencies)
+
+📊 CSV Data & Edge Breakdown
+
+Your Betting Strategy: TC -3+ → sit out, TC -2+ → sit out, TC -1+ → sit out, TC 0+ → sit out, TC 1+ → 
+5
+,
+T
+C
+2
++
+→
+5,TC2+→10, TC 3+ → 
+15
+,
+T
+C
+4
++
+→
+15,TC4+→25, TC 5+ → 
+25
+,
+T
+C
+6
++
+→
+25,TC6+→25
+
+Hourly Expected Value
+
+$10.20
+Total Expected Value
+
+$1020.24
+Risk of Ruin
+
+0.10%
+Total Hands
+
+10,000
+Expected Value Over Time
+Monte Carlo Analysis (1,000 Runs)
+✅ Simulation complete!
+Statistical Analysis (1,000 Simulations)
+Mean Profit
+
+$15.84
+Standard Deviation
+
+$92.05
+Theoretical Edge
+
+1.853%
+Actual Avg Edge
+
+1.845%
+-0.008%
+95% Confidence Interval
+
+$-165 to $196
+
+📊 Distribution & Performance
+
+
+⚠️ Risk Analysis
+
+
+📈 Advanced Metrics
+
+Distribution of Final Bankrolls
+Average Performance vs Expected
+Expected Profit
+
+$1020.24
+Average Actual Profit
+
+$15.84
+$-1004.41
+Best vs Worst Case Scenarios
+Best Case Profit
+
+$312.61
+$-707.63 vs Expected
+Worst Case Profit
+
+$-316.35
+$-1336.59 vs Expected
+Bankroll Recommendations
+Current Strategy Risk:
+
+Risk of Ruin: 0.10%
+✅ Low risk of ruin
+
+Bankroll Adequacy:
+
+Recommended: $366.99
+Current Adequacy: 1362.4%
+✅ Bankroll appears adequate

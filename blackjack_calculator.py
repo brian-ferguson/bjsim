@@ -146,8 +146,8 @@ class BlackjackCalculator:
                     mapped_frequencies[tc] = 0.0
                 
                 # Map all frequencies from CSV to our strategy range
-                for true_count, percentage in frequencies.items():
-                    freq = percentage / 100.0
+                for true_count, freq in frequencies.items():
+                    # freq is already converted from percentage in the CSV loading
                     
                     if true_count <= -3:
                         # All very negative counts map to TC -3
