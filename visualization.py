@@ -329,7 +329,7 @@ class Visualizer:
             expected_profit = expected_trajectory[-1] - starting_bankroll
         else:
             final_avg_profit = 0
-            expected_profit = 0
+            expected_profit = expected_trajectory[-1] - starting_bankroll if expected_trajectory else 0
         
         # Color based on performance vs expected
         if final_avg_profit > expected_profit:

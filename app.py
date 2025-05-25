@@ -520,6 +520,9 @@ def main():
         # Average trajectory analysis
         st.subheader("Average Performance vs Expected")
         
+        # Calculate expected profit for comparison
+        total_ev = calculator.calculate_hourly_ev() * hours_played
+        
         # Calculate average trajectory across all simulations properly
         if monte_carlo_results['trajectories']:
             max_hours = max(len(traj) for traj in monte_carlo_results['trajectories']) - 1
