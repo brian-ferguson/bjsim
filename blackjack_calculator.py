@@ -339,52 +339,36 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using weighted edge methodology.
-        Only considers hands where we actually place bets (positive counts).
+        Calculate risk of ruin using the standard gambler's ruin formula.
+        Uses overall edge and average bet from the betting strategy.
         """
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Calculate weighted edge and average bet for betting hands only
-        total_weighted_edge = 0
-        total_weighted_bet = 0
-        total_betting_frequency = 0
-        
-        for true_count, frequency in self.count_frequencies.items():
-            bet_amount = self._get_bet_for_count(true_count)
-            if bet_amount > 0:  # Only count hands where we actually bet
-                edge = self._get_actual_edge_for_count(true_count)
-                total_weighted_edge += edge * frequency * bet_amount
-                total_weighted_bet += frequency * bet_amount
-                total_betting_frequency += frequency
-        
-        if total_weighted_bet == 0 or total_betting_frequency == 0:
+        # Use the overall edge and average bet already calculated
+        avg_bet = self._calculate_average_bet()
+        if avg_bet <= 0:
             return 100.0
         
-        # Calculate effective edge per dollar bet
-        weighted_average_edge = total_weighted_edge / total_weighted_bet
-        
-        # Calculate average bet size when betting
-        avg_bet_when_betting = total_weighted_bet / total_betting_frequency
-        
         # Number of betting units in bankroll
-        betting_units = self.starting_bankroll / avg_bet_when_betting
+        betting_units = self.starting_bankroll / avg_bet
         
         # Standard blackjack variance per unit bet
         variance_per_unit = 1.3
         
         # Risk of ruin formula: RoR = exp(-2 * edge * units / variance)
-        if betting_units > 0 and variance_per_unit > 0:
-            exponent = -2 * weighted_average_edge * betting_units / variance_per_unit
-            # Prevent numerical overflow/underflow and ensure reasonable minimums
-            if exponent < -10:  # Very low risk, but show minimum 0.01%
-                ror = 0.01
-            elif exponent > 0:  # Negative edge scenario
-                ror = 100.0
+        if betting_units > 0:
+            exponent = -2 * self.edge * betting_units / variance_per_unit
+            
+            # Calculate risk of ruin with reasonable bounds
+            if exponent < -15:  # Very low risk, show minimum
+                ror = 0.1
+            elif exponent > 2:  # High risk scenario
+                ror = 99.9
             else:
                 ror = math.exp(exponent) * 100
-                # Ensure minimum display of 0.01% for very low risk
-                ror = max(ror, 0.01)
+                # Ensure minimum display for positive edge
+                ror = max(ror, 0.1)
         else:
             ror = 100.0
         
