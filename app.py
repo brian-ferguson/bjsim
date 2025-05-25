@@ -535,7 +535,8 @@ def main():
                         hour_values.append(trajectory[-1])
                 avg_trajectory.append(np.mean(hour_values))
             
-            avg_profit = avg_trajectory[-1] - starting_bankroll if avg_trajectory else 0
+            # Calculate average profit from simulation statistics directly
+            avg_profit = monte_carlo_results['statistics']['mean_profit']
         else:
             avg_trajectory = []
             avg_profit = 0
