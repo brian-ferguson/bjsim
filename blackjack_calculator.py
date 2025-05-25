@@ -367,10 +367,18 @@ class BlackjackCalculator:
         units = betting_units
         
         a = (1 - e / v) / (1 + e / v)
-        ror = (a ** units) * 100
+        
+        # Use logarithmic math to prevent underflow
+        if a <= 0:
+            return 100.0
+        
+        log_a = math.log(a)
+        log_ror = units * log_a
+        ror = math.exp(log_ror) * 100
         
         # Debug output to verify calculations
-        print(f"DEBUG RoR: e={e:.4f}, v={v}, units={units:.1f}, a={a:.6f}, raw_ror={ror:.4f}%")
+        print(f"DEBUG RoR: weighted_edge={e:.4f}, avg_bet={average_bet:.2f}, betting_units={units:.1f}")
+        print(f"DEBUG RoR: a={a:.6f}, log(a)={log_a:.6f}, log_ror={log_ror:.2f}, ror={ror:.4f}%")
         
         # Apply realistic bounds
         ror = max(min(ror, 100.0), 0.1)
