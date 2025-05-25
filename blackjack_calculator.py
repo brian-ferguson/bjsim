@@ -114,10 +114,10 @@ class BlackjackCalculator:
         penetration_deck = self.table_rules['penetration_deck']
         
         if penetration_deck == self.num_decks:
-            # No penetration case
+            # Maximum penetration (all cards played)
             filename = f"true count distributions/{self.num_decks}decks-nopenetration.csv"
         else:
-            # Specific penetration
+            # Specific penetration (only penetration_deck out of num_decks played)
             filename = f"true count distributions/{self.num_decks}decks-{penetration_deck}penetration.csv"
         
         frequencies = {}
