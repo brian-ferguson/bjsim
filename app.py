@@ -520,16 +520,25 @@ def main():
         # Average trajectory analysis
         st.subheader("Average Performance vs Expected")
         
-        # Use the pre-calculated average trajectory from Monte Carlo results
-        avg_trajectory = monte_carlo_results.get('avg_trajectory', [])
-        
-        if avg_trajectory and len(avg_trajectory) > 0:
-            avg_profit = avg_trajectory[-1] - starting_bankroll
-            # Debug: ensure we have valid trajectory data
-            st.write(f"Debug: Average trajectory has {len(avg_trajectory)} data points")
+        # Calculate average trajectory across all simulations properly
+        if monte_carlo_results['trajectories']:
+            max_hours = max(len(traj) for traj in monte_carlo_results['trajectories']) - 1
+            avg_trajectory = []
+            
+            for hour in range(max_hours + 1):
+                hour_values = []
+                for trajectory in monte_carlo_results['trajectories']:
+                    if hour < len(trajectory):
+                        hour_values.append(trajectory[hour])
+                    else:
+                        # Use final value if trajectory ended early
+                        hour_values.append(trajectory[-1])
+                avg_trajectory.append(np.mean(hour_values))
+            
+            avg_profit = avg_trajectory[-1] - starting_bankroll if avg_trajectory else 0
         else:
+            avg_trajectory = []
             avg_profit = 0
-            st.warning("No average trajectory data available for comparison graph")
         
         col1, col2 = st.columns(2)
         with col1:
