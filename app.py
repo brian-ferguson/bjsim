@@ -18,8 +18,13 @@ def main():
     # Sidebar for inputs
     st.sidebar.header("Table Rules Configuration")
     
+    # Information section
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 True Count Data")
+    st.sidebar.markdown("Data will update when simulation runs")
+    
     # Deck configuration
-    deck_options = [1, 2, 4, 6, 8]
+    deck_options = [1, 2, 4, 6]
     num_decks = st.sidebar.selectbox(
         "Number of Decks in Shoe",
         options=deck_options,
@@ -192,6 +197,8 @@ def main():
         help="More runs provide better statistical accuracy but take longer to compute"
     )
     
+
+
     # Calculate button
     if st.sidebar.button("Run Simulation", type="primary"):
         # Validate betting strategy
@@ -218,28 +225,6 @@ def main():
             betting_strategy=st.session_state.betting_strategy,
             table_rules=table_rules
         )
-        
-        # Update the frequency display with actual loaded data
-        with frequency_placeholder.container():
-            st.markdown("---")
-            st.markdown("### 📊 True Count Data")
-            st.markdown("**Edge per True Count:**")
-            edge_text = ""
-            for tc in range(-3, 7):
-                edge = calculator.count_edges.get(tc, 0) * 100
-                edge_text += f"TC {tc:+d}: {edge:+.1f}%, "
-                if tc == -1 or tc == 2:
-                    edge_text += "\n"
-            st.markdown(edge_text.rstrip(", "))
-            
-            st.markdown("**Frequencies from CSV:**")
-            freq_text = ""
-            for tc in range(-3, 7):
-                freq = calculator.count_frequencies.get(tc, 0) * 100
-                freq_text += f"TC {tc:+d}: {freq:.1f}%, "
-                if tc == -1 or tc == 2:
-                    freq_text += "\n"
-            st.markdown(freq_text.rstrip(", "))
         
         # Display table rules summary
         st.header("🎲 Table Rules Configuration")
@@ -585,8 +570,8 @@ def main():
         
 
 
-    # Information section - will be updated after calculator is created
-    frequency_placeholder = st.sidebar.empty()
+    # Information section - will be updated after calculator is created  
+    st.sidebar.markdown("---")
     
     st.sidebar.markdown("### 📖 About This Tool")
     st.sidebar.markdown("""
