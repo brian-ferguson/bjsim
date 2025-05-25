@@ -396,21 +396,51 @@ class BlackjackCalculator:
     
     def calculate_recommended_bankroll(self):
         """
-        Calculate recommended bankroll for given risk tolerance.
-        Uses Kelly Criterion and risk of ruin formulas.
+        Calculate recommended bankroll for 5% risk of ruin.
+        Uses the same bet-weighted edge and average bet as risk calculation.
         """
         # Target risk of ruin of 5%
         target_ror = 0.05
         
-        if self.edge <= 0:
+        # Calculate bet-weighted edge (same as risk of ruin calculation)
+        total_weighted_edge = 0
+        total_bet_amount = 0
+        
+        for true_count, frequency in self.count_frequencies.items():
+            edge = self.count_edges[true_count]
+            bet_amount = self._get_bet_for_count(true_count)
+            
+            if bet_amount > 0:
+                total_weighted_edge += edge * bet_amount * frequency
+                total_bet_amount += bet_amount * frequency
+        
+        if total_bet_amount == 0:
             return float('inf')
         
-        # Solve for bankroll: RoR = exp(-2 * edge * bankroll / variance)
-        # bankroll = -ln(RoR) * variance / (2 * edge)
-        variance_per_unit = self.std_dev_per_hand ** 2
+        weighted_edge = total_weighted_edge / total_bet_amount
         
-        required_units = -math.log(target_ror) * variance_per_unit / (2 * self.edge)
-        required_bankroll = required_units * self.avg_bet
+        if weighted_edge <= 0:
+            return float('inf')
+        
+        # Average bet (same as risk of ruin calculation)
+        betting_hands_frequency = sum(frequency for tc, frequency in self.count_frequencies.items() 
+                                    if self._get_bet_for_count(tc) > 0)
+        average_bet = total_bet_amount / betting_hands_frequency if betting_hands_frequency > 0 else 0
+        
+        if average_bet <= 0:
+            return float('inf')
+        
+        # Use the same formula as risk of ruin but solve for units
+        # RoR = ((1 - e/v) / (1 + e/v))^units
+        # Solve for units: units = ln(RoR) / ln(a)
+        variance = 1.6
+        a = (1 - weighted_edge / variance) / (1 + weighted_edge / variance)
+        
+        if a <= 0 or a >= 1:
+            return float('inf')
+        
+        required_units = math.log(target_ror) / math.log(a)
+        required_bankroll = required_units * average_bet
         
         return required_bankroll
     
