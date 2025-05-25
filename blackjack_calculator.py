@@ -292,38 +292,16 @@ class BlackjackCalculator:
         total_ev = 0
         total_freq = 0
         
-        # Load the original CSV frequencies (not the mapped ones)
-        import os
-        import csv
-        
-        penetration_deck = self.table_rules['penetration_deck']
-        
-        if penetration_deck == self.num_decks:
-            filename = f"true count distributions/{self.num_decks}decks-nopenetration.csv"
-        else:
-            filename = f"true count distributions/{self.num_decks}decks-{penetration_deck}penetration.csv"
-        
-        if os.path.exists(filename):
-            with open(filename, 'r') as file:
-                reader = csv.reader(file)
-                for row in reader:
-                    if row and not row[0].startswith('#') and row[0] != 'True Count':
-                        try:
-                            true_count = int(row[0])
-                            percentage = float(row[1])
-                            frequency = percentage / 100.0
-                            
-                            # Get edge and bet for this exact count
-                            edge = self._get_actual_edge_for_count(true_count)
-                            bet_amount = self._get_bet_for_count(true_count)
-                            
-                            # Only include hands where we actually bet (bet_amount > 0)
-                            if bet_amount > 0:
-                                total_ev += edge * bet_amount * frequency
-                                total_freq += frequency
-                            
-                        except (ValueError, IndexError):
-                            continue
+        # Use the same mapped frequencies that the simulation uses
+        for true_count, frequency in self.count_frequencies.items():
+            # Get edge and bet for this count
+            edge = self.count_edges[true_count]
+            bet_amount = self._get_bet_for_count(true_count)
+            
+            # Only include hands where we actually bet (bet_amount > 0)
+            if bet_amount > 0:
+                total_ev += edge * bet_amount * frequency
+                total_freq += frequency
         
         return total_ev / total_freq if total_freq > 0 else 0
     
