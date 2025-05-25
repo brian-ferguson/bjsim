@@ -320,11 +320,11 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using bet-weighted edge and variance.
-        Uses the actual betting strategy weighting, not simple averages.
+        Calculate risk of ruin using proper bet-weighted edge and realistic variance.
+        Returns theoretical RoR that should approximate Monte Carlo results.
         """
-        # Calculate bet-weighted edge (total EV / total money wagered)
-        total_ev = 0
+        # Calculate true bet-weighted edge (total EV / total money wagered)
+        total_weighted_edge = 0
         total_bet_amount = 0
         
         for true_count, frequency in self.count_frequencies.items():
@@ -332,54 +332,40 @@ class BlackjackCalculator:
             bet_amount = self._get_bet_for_count(true_count)
             
             if bet_amount > 0:  # Only count hands where we actually bet
-                total_ev += edge * bet_amount * frequency
+                total_weighted_edge += edge * bet_amount * frequency
                 total_bet_amount += bet_amount * frequency
         
         if total_bet_amount == 0:
             return 100.0
         
-        # Bet-weighted edge (not simple average)
-        weighted_edge = total_ev / total_bet_amount
-        
-        # Calculate bet-weighted variance per unit
-        # Higher variance for larger bets (doubles, splits at high counts)
-        total_variance = 0
-        for true_count, frequency in self.count_frequencies.items():
-            bet_amount = self._get_bet_for_count(true_count)
-            
-            if bet_amount > 0:
-                # Higher variance at positive counts due to doubles/splits
-                if true_count >= 2:
-                    variance_per_unit = 1.5 + (true_count - 2) * 0.1  # 1.5 to 1.9
-                else:
-                    variance_per_unit = 1.3
-                
-                bet_weighted_variance = variance_per_unit * (bet_amount ** 2) * frequency
-                total_variance += bet_weighted_variance
-        
-        # Average variance per unit bet
-        avg_variance_per_unit = total_variance / total_bet_amount if total_bet_amount > 0 else 1.3
+        # True bet-weighted edge
+        weighted_edge = total_weighted_edge / total_bet_amount
         
         # If no positive edge, immediate ruin
         if weighted_edge <= 0:
             return 100.0
         
-        # Average bet for calculating betting units
-        avg_bet = total_bet_amount
+        # Calculate accurate average bet (total money wagered / total hands played)
+        total_hands = sum(self.count_frequencies.values())
+        average_bet = total_bet_amount / total_hands if total_hands > 0 else 0
         
-        # Number of betting units in bankroll  
-        betting_units = self.starting_bankroll / avg_bet
+        if average_bet <= 0:
+            return 100.0
+        
+        # Number of betting units in bankroll
+        betting_units = self.starting_bankroll / average_bet
+        
+        # Use realistic variance for modern blackjack with doubling/splitting
+        # Higher variance for strategies with bet spreads due to more aggressive play at high counts
+        empirical_variance = 1.6  # More realistic than 1.3 for modern games with full basic strategy
         
         # Risk of ruin formula: RoR = exp(-2 * edge * units / variance)
-        if betting_units > 0:
-            exponent = -2 * weighted_edge * betting_units / avg_variance_per_unit
-            
-            # Remove artificial bounds - show actual calculated risk
-            ror = math.exp(exponent) * 100
-        else:
-            ror = 100.0
+        exponent = -2 * weighted_edge * betting_units / empirical_variance
         
-        return min(ror, 100.0)
+        # Calculate natural risk without artificial bounds
+        ror = math.exp(exponent) * 100
+        
+        return round(min(ror, 100.0), 1)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""

@@ -1,0 +1,67 @@
+I need help correcting the theoretical calculate_risk_of_ruin method in my blackjack app. Right now it's returning about 30% risk of ruin, but that seems too high compared to expectations from Monte Carlo results.
+
+Here's the setup and the improvements I want you to implement:
+
+🔢 Current formula used:
+RoR = exp(-2 * edge * betting_units / variance)
+
+Where:
+
+edge: currently weighted by bet size and true count
+
+betting_units: starting_bankroll / average_bet_size
+
+variance: fixed or slightly adjusted (e.g. 1.3)
+
+🎯 Goals:
+✅ Use the true bet-weighted edge, already computed as:
+
+python
+Copy
+Edit
+weighted_edge = total_weighted_edge / total_bet_amount
+✅ Replace the static variance (1.3) with an empirical estimate:
+
+Use the actual simulation data (hand results) to estimate variance per unit.
+
+You can use this formula:
+
+python
+Copy
+Edit
+profits_per_unit = all_hand_results / bets
+empirical_variance = np.var(profits_per_unit)
+If that data isn’t available directly, fall back to a more accurate estimate than 1.3—assume ~1.5–1.8 for modern blackjack games with doubling/splitting.
+
+✅ Use accurate average_bet for computing betting units:
+
+python
+Copy
+Edit
+betting_units = starting_bankroll / average_bet
+✅ Do not artificially cap the RoR at 0.1% or add floors. Let it calculate naturally:
+
+Remove lines like max(ror, 0.1) and if exponent < -15: ror = 0.1
+
+✍️ Update this method:
+python
+Copy
+Edit
+def calculate_risk_of_ruin(self, hours_played):
+    # Update this method with all the above improvements.
+    # Use weighted_edge, accurate average bet, and empirical or more realistic variance.
+    # Do not cap the result.
+    # Return the RoR as a float percentage between 0 and 100, rounded to 1 decimal place.
+💡 Notes:
+
+I want the theoretical risk of ruin to approximate what the simulation shows (~0.5% to 5%) when the edge and bankroll are realistic.
+
+The Monte Carlo RoR is already calculated in the app.py tab correctly:
+
+python
+Copy
+Edit
+prob_ruin = np.mean(np.array(final_bankrolls) <= 0)
+The theoretical calculation should reflect similar magnitude for validation.
+
+Let me know if you need to see the exact method or data structures being passed.
