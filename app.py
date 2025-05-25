@@ -529,20 +529,23 @@ def main():
         # Use the actual mean profit from Monte Carlo simulation results
         avg_profit = monte_carlo_results['statistics']['mean_profit']
         
-        # Calculate average trajectory across all simulations properly
+        # Calculate average trajectory properly - convert profit to bankroll values
         if monte_carlo_results['trajectories']:
-            max_hours = max(len(traj) for traj in monte_carlo_results['trajectories']) - 1
+            # All trajectories should have the same length (hours_played + 1)
             avg_trajectory = []
+            num_trajectories = len(monte_carlo_results['trajectories'])
+            trajectory_length = len(monte_carlo_results['trajectories'][0])
             
-            for hour in range(max_hours + 1):
-                hour_values = []
+            for hour_idx in range(trajectory_length):
+                hour_bankrolls = []
                 for trajectory in monte_carlo_results['trajectories']:
-                    if hour < len(trajectory):
-                        hour_values.append(trajectory[hour])
-                    else:
-                        # Use final value if trajectory ended early
-                        hour_values.append(trajectory[-1])
-                avg_trajectory.append(np.mean(hour_values))
+                    if hour_idx < len(trajectory):
+                        hour_bankrolls.append(trajectory[hour_idx])
+                
+                if hour_bankrolls:
+                    avg_trajectory.append(np.mean(hour_bankrolls))
+                else:
+                    avg_trajectory.append(starting_bankroll)
         else:
             avg_trajectory = []
         
