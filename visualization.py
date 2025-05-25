@@ -23,12 +23,12 @@ class Visualizer:
         }
     
     def plot_expected_value_over_time(self, hours_played: int, hourly_ev: float, 
-                                    hourly_std: float, starting_bankroll: float = 1000) -> go.Figure:
+                                    hourly_std: float) -> go.Figure:
         """
-        Plot expected value over time with confidence intervals starting from bankroll.
+        Plot expected value over time with confidence intervals.
         """
         hours = np.arange(0, hours_played + 1)
-        cumulative_ev = starting_bankroll + (hours * hourly_ev)
+        cumulative_ev = hours * hourly_ev
         
         # Calculate confidence intervals (95%)
         cumulative_std = np.sqrt(hours) * hourly_std
@@ -57,14 +57,14 @@ class Visualizer:
             line=dict(color=self.colors['primary'], width=3)
         ))
         
-        # Add starting bankroll line
-        fig.add_hline(y=starting_bankroll, line_dash="dash", line_color="gray", 
-                     annotation_text="Starting Bankroll")
+        # Add break-even line
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", 
+                     annotation_text="Break Even")
         
         fig.update_layout(
-            title='Expected Bankroll Over Time',
+            title='Expected Value Over Time',
             xaxis_title='Hours Played',
-            yaxis_title='Bankroll ($)',
+            yaxis_title='Cumulative Profit ($)',
             hovermode='x unified',
             showlegend=True
         )
@@ -323,13 +323,9 @@ class Visualizer:
             line=dict(color=self.colors['primary'], width=3, dash='dash')
         ))
         
-        # Add average actual trajectory (with safety check)
-        if avg_trajectory and len(avg_trajectory) > 0:
-            final_avg_profit = avg_trajectory[-1] - starting_bankroll
-            expected_profit = expected_trajectory[-1] - starting_bankroll
-        else:
-            final_avg_profit = 0
-            expected_profit = 0
+        # Add average actual trajectory
+        final_avg_profit = avg_trajectory[-1] - starting_bankroll
+        expected_profit = expected_trajectory[-1] - starting_bankroll
         
         # Color based on performance vs expected
         if final_avg_profit > expected_profit:
@@ -342,26 +338,21 @@ class Visualizer:
             color = self.colors['warning']
             name = 'Average Actual (At Expected)'
         
-        # Only add trajectory if we have data
-        if avg_trajectory and len(avg_trajectory) > 0:
-            fig.add_trace(go.Scatter(
-                x=hours,
-                y=avg_trajectory,
-                mode='lines',
-                name=name,
-                line=dict(color=color, width=3)
-            ))
+        fig.add_trace(go.Scatter(
+            x=hours,
+            y=avg_trajectory,
+            mode='lines',
+            name=name,
+            line=dict(color=color, width=3)
+        ))
         
         # Add starting bankroll line
         fig.add_hline(y=starting_bankroll, line_dash="dot", 
                      line_color="gray",
                      annotation_text="Starting Bankroll")
         
-        # Set title based on trajectory length
-        trajectory_length = len(avg_trajectory) if avg_trajectory else 0
-        
         fig.update_layout(
-            title=f'Average Performance vs Expected ({trajectory_length} Hours)',
+            title=f'Average Performance vs Expected ({len(avg_trajectory)} Hours)',
             xaxis_title='Hours Played',
             yaxis_title='Bankroll ($)',
             hovermode='x unified',
