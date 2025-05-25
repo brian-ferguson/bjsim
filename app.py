@@ -219,6 +219,28 @@ def main():
             table_rules=table_rules
         )
         
+        # Update the frequency display with actual loaded data
+        with frequency_placeholder.container():
+            st.markdown("---")
+            st.markdown("### 📊 True Count Data")
+            st.markdown("**Edge per True Count:**")
+            edge_text = ""
+            for tc in range(-3, 7):
+                edge = calculator.count_edges.get(tc, 0) * 100
+                edge_text += f"TC {tc:+d}: {edge:+.1f}%, "
+                if tc == -1 or tc == 2:
+                    edge_text += "\n"
+            st.markdown(edge_text.rstrip(", "))
+            
+            st.markdown("**Frequencies from CSV:**")
+            freq_text = ""
+            for tc in range(-3, 7):
+                freq = calculator.count_frequencies.get(tc, 0) * 100
+                freq_text += f"TC {tc:+d}: {freq:.1f}%, "
+                if tc == -1 or tc == 2:
+                    freq_text += "\n"
+            st.markdown(freq_text.rstrip(", "))
+        
         # Display table rules summary
         st.header("🎲 Table Rules Configuration")
         
@@ -563,22 +585,8 @@ def main():
         
 
 
-    # Information section
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 True Count Edge Calculation")
-    st.sidebar.markdown("""
-    **Edge per True Count:**
-    - Negative TC: -0.6% + (TC × 0.5%)
-    - Positive TC: -0.6% + (TC × 0.7%)
-    
-    **Balanced Card Counting Edges:**
-    - TC +1: 0.1%, TC +2: 0.8%, TC +3: 1.5%
-    
-    **Frequencies Used:**
-    - TC -3: 15%, TC -2: 18%, TC -1: 22%
-    - TC 0: 20%, TC +1: 12%, TC +2: 8%
-    - TC +3: 3%, TC +4: 1.5%, TC +5: 0.5%, TC +6: 0.25%
-    """)
+    # Information section - will be updated after calculator is created
+    frequency_placeholder = st.sidebar.empty()
     
     st.sidebar.markdown("### 📖 About This Tool")
     st.sidebar.markdown("""
