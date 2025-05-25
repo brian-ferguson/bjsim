@@ -58,8 +58,9 @@ class MonteCarloSimulation:
                     hands_played += 1
                     continue
                 
-                # Track actual edge experienced (only for hands where we bet)
-                total_edge_weighted += edge * bet_amount
+                # Track actual profit contribution (in dollars, not edge proportion)
+                expected_profit = edge * bet_amount
+                total_edge_weighted += expected_profit
                 total_bet_amount += bet_amount
                 
                 # Simulate hand outcome
