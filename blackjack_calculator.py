@@ -321,15 +321,16 @@ class BlackjackCalculator:
     def calculate_risk_of_ruin(self, hours_played):
         """
         Calculate theoretical Risk of Ruin using:
-        1. True count to edge mapping (Hi-Lo system)
-        2. True count to bet mapping (bet spread)
-        3. Simulated true count frequencies
+        1. Hi-Lo count system edge mapping from CSV frequencies
+        2. User's bet spread mapping
+        3. Simulated true count frequencies from selected CSV file
         4. Starting bankroll amount
         5. Variance per hand (1.6 for modern blackjack)
         
+        Uses analytical formula: RoR = ((1 - e/v) / (1 + e/v))^units
         Returns RoR as percentage rounded to 2 decimal places.
         """
-        # Calculate bet-weighted edge across all true counts
+        # Calculate bet-weighted edge across all true counts using CSV frequencies
         total_weighted_edge = 0
         total_bet_amount = 0
         
@@ -344,13 +345,13 @@ class BlackjackCalculator:
         if total_bet_amount == 0:
             return 100.0
         
-        # Weighted edge (bet-weighted across true counts)
+        # Bet-weighted edge calculation
         weighted_edge = total_weighted_edge / total_bet_amount
         
         if weighted_edge <= 0:
             return 100.0
         
-        # Average bet (across betting hands only)
+        # Average bet across betting hands only
         betting_hands_frequency = sum(frequency for tc, frequency in self.count_frequencies.items() 
                                     if self._get_bet_for_count(tc) > 0)
         average_bet = total_bet_amount / betting_hands_frequency if betting_hands_frequency > 0 else 0
@@ -359,36 +360,26 @@ class BlackjackCalculator:
             return 100.0
         
         # Number of betting units in bankroll
-        betting_units = self.starting_bankroll / average_bet
+        units = self.starting_bankroll / average_bet
         
-        # Variance per hand for modern blackjack
+        # Variance per hand for modern blackjack (standard value)
         variance = 1.6
         
-        # Risk of Ruin formula: RoR = ((1 - e/v) / (1 + e/v)) ** units
-        # Use logarithmic math to prevent underflow
+        # Analytical Risk of Ruin formula: RoR = ((1 - e/v) / (1 + e/v))^units
+        # Use logarithmic calculation for numerical stability
         a = (1 - weighted_edge / variance) / (1 + weighted_edge / variance)
         
-        if a <= 0:
+        if a <= 0 or a >= 1:
             return 100.0
         
-        # Calculate using logarithms for numerical stability
-        log_ror = betting_units * math.log(a)
-        theoretical_ror = math.exp(log_ror) * 100
+        # Calculate using logarithms to prevent underflow
+        log_ror = units * math.log(a)
+        ror = math.exp(log_ror) * 100
         
-        # Adjust for realistic conditions (session variance, heat, finite play)
-        if betting_units > 300:
-            realistic_ror = 3.5 + (500 / betting_units)
-        elif betting_units > 200:
-            realistic_ror = 4.5 + (600 / betting_units)
-        elif betting_units > 100:
-            realistic_ror = 6.0 + (800 / betting_units)
-        else:
-            realistic_ror = min(theoretical_ror * 50, 25.0)
+        # Ensure reasonable bounds
+        ror = max(min(ror, 100.0), 0.0)
         
-        # Return realistic RoR clamped to reasonable bounds
-        final_ror = max(min(realistic_ror, 100.0), 0.01)
-        
-        return round(final_ror, 2)
+        return round(ror, 2)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""
