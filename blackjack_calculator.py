@@ -137,19 +137,29 @@ class BlackjackCalculator:
                             except (ValueError, IndexError):
                                 continue
                 
-                # Filter to our range of interest (-3 to +6) but DON'T normalize
-                # Keep the actual frequencies as they represent real probability
-                filtered_frequencies = {}
-                for tc in range(-3, 7):
-                    if tc in frequencies:
-                        # Use actual frequency from CSV (already in percentage form)
-                        filtered_frequencies[tc] = frequencies[tc] / 100.0
-                    else:
-                        # Use a small default value for missing counts
-                        filtered_frequencies[tc] = 0.0001
+                # Map all counts to betting strategy ranges
+                # Extreme counts get mapped to the edge cases of our strategy
+                mapped_frequencies = {}
                 
-                # Don't normalize - use actual frequencies from simulation data
-                return filtered_frequencies
+                # Initialize our strategy range with zeros
+                for tc in range(-3, 7):
+                    mapped_frequencies[tc] = 0.0
+                
+                # Map all frequencies from CSV to our strategy range
+                for true_count, percentage in frequencies.items():
+                    freq = percentage / 100.0
+                    
+                    if true_count <= -3:
+                        # All very negative counts map to TC -3
+                        mapped_frequencies[-3] += freq
+                    elif true_count >= 6:
+                        # All very positive counts map to TC +6  
+                        mapped_frequencies[6] += freq
+                    elif -3 < true_count < 6:
+                        # Counts in our range map directly
+                        mapped_frequencies[true_count] = freq
+                
+                return mapped_frequencies
                     
             except Exception as e:
                 print(f"Error loading CSV {filename}: {e}")
