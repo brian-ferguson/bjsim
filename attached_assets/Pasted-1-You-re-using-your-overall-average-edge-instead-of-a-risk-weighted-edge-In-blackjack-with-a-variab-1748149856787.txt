@@ -1,0 +1,76 @@
+1. You’re using your overall average edge instead of a risk-weighted edge
+In blackjack with a variable bet spread, most of the money is bet at high true counts, not uniformly. But your formula uses:
+
+python
+Copy
+Edit
+edge = average_edge_from_betting_strategy  # likely unweighted
+If you're calculating edge as a simple average across all hands, that underestimates the actual risk. What matters is how much $ is being bet at what edge, and how volatile those bets are.
+
+🛠️ Fix: Use your actual weighted average edge (like you already compute in the Monte Carlo sim):
+
+python
+Copy
+Edit
+actual_edge = total_edge_weighted / total_bet_amount  # already in your code
+Then plug that into the formula.
+
+🔸 2. You're using fixed variance (1.3) instead of weighted variance
+Variance depends on bet sizing and count. If you bet small at negative counts (which you do) and big at positive counts (which have higher variance due to doubling, splitting, etc.), the true variance of your betting strategy is higher than 1.3.
+
+🛠️ Fix Option: Estimate empirical variance per unit using your simulation data:
+
+python
+Copy
+Edit
+unit_profits = all_hand_results / bet_amounts_per_hand
+variance_per_unit = np.var(unit_profits)
+Even better: compute the variance of final bankroll outcomes per unit of average bet size.
+
+🔸 3. Manual bound limits are interfering
+This part artificially caps minimum RoR to 0.1%:
+
+python
+Copy
+Edit
+if exponent < -15:
+    ror = 0.1  # 👈 This is artificial
+That explains why it's never lower than 0.1%, even when the real value might be 0.05% or lower.
+
+🛠️ Fix: Remove the artificial lower bound:
+
+python
+Copy
+Edit
+ror = math.exp(exponent) * 100
+And do not apply a max(ror, 0.1) afterward.
+
+Let it show actual results, even if they’re very small (e.g. 0.03%).
+
+✅ Better Solution: Use Monte Carlo to Estimate RoR
+You're already running 12,700 hands across many simulations. That’s a solid base to estimate RoR empirically.
+
+Your code does this correctly here:
+
+python
+Copy
+Edit
+ruin_count = np.sum(final_bankrolls <= 0)
+ror_percentage = (ruin_count / len(final_bankrolls)) * 100
+This is your true RoR.
+
+➕ Bonus: Plot the distribution of final bankrolls
+This will visually confirm how often the bankroll hits 0.
+
+python
+Copy
+Edit
+import seaborn as sns
+sns.histplot(final_bankrolls, bins=50)
+🧠 Summary of Fixes
+Issue	Fix
+Using unweighted edge	Use total_edge_weighted / total_bet_amount
+Using fixed variance 1.3	Compute variance empirically from hand results
+Artificial floor of 0.1%	Remove max(ror, 0.1) and if exponent < -15 block
+Not using MC sim output	Use your actual simulation data — it's more accurate
+

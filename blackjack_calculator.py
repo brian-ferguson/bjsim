@@ -292,26 +292,18 @@ class BlackjackCalculator:
         total_ev = 0
         total_freq = 0
         
-        # Debug: Check if frequencies sum to approximately 1.0
-        freq_sum = sum(self.count_frequencies.values())
-        print(f"DEBUG: Total frequency sum = {freq_sum}")
-        
         # Use the same mapped frequencies that the simulation uses
         for true_count, frequency in self.count_frequencies.items():
             # Get edge and bet for this count
             edge = self.count_edges[true_count]
             bet_amount = self._get_bet_for_count(true_count)
             
-            # Debug output for each count
-            ev_contribution = edge * bet_amount * frequency
-            print(f"DEBUG: TC {true_count}: freq={frequency:.4f}, edge={edge:.4f}, bet=${bet_amount}, EV_contrib=${ev_contribution:.4f}")
-            
             # Include ALL hands (even when we sit out with $0 bet)
+            ev_contribution = edge * bet_amount * frequency
             total_ev += ev_contribution
             total_freq += frequency
         
         ev_per_hand = total_ev / total_freq if total_freq > 0 else 0
-        print(f"DEBUG: Final EV per hand = ${ev_per_hand:.4f} (total_ev=${total_ev:.4f}, total_freq={total_freq:.4f})")
         
         return ev_per_hand
     
@@ -328,36 +320,62 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using the standard gambler's ruin formula.
-        Uses overall edge and average bet from the betting strategy.
+        Calculate risk of ruin using bet-weighted edge and variance.
+        Uses the actual betting strategy weighting, not simple averages.
         """
-        if self.edge <= 0:
-            return 100.0  # Certain ruin with no edge
+        # Calculate bet-weighted edge (total EV / total money wagered)
+        total_ev = 0
+        total_bet_amount = 0
         
-        # Use the overall edge and average bet already calculated
-        avg_bet = self._calculate_average_bet()
-        if avg_bet <= 0:
+        for true_count, frequency in self.count_frequencies.items():
+            edge = self.count_edges[true_count]
+            bet_amount = self._get_bet_for_count(true_count)
+            
+            if bet_amount > 0:  # Only count hands where we actually bet
+                total_ev += edge * bet_amount * frequency
+                total_bet_amount += bet_amount * frequency
+        
+        if total_bet_amount == 0:
             return 100.0
         
-        # Number of betting units in bankroll
-        betting_units = self.starting_bankroll / avg_bet
+        # Bet-weighted edge (not simple average)
+        weighted_edge = total_ev / total_bet_amount
         
-        # Standard blackjack variance per unit bet
-        variance_per_unit = 1.3
+        # Calculate bet-weighted variance per unit
+        # Higher variance for larger bets (doubles, splits at high counts)
+        total_variance = 0
+        for true_count, frequency in self.count_frequencies.items():
+            bet_amount = self._get_bet_for_count(true_count)
+            
+            if bet_amount > 0:
+                # Higher variance at positive counts due to doubles/splits
+                if true_count >= 2:
+                    variance_per_unit = 1.5 + (true_count - 2) * 0.1  # 1.5 to 1.9
+                else:
+                    variance_per_unit = 1.3
+                
+                bet_weighted_variance = variance_per_unit * (bet_amount ** 2) * frequency
+                total_variance += bet_weighted_variance
+        
+        # Average variance per unit bet
+        avg_variance_per_unit = total_variance / total_bet_amount if total_bet_amount > 0 else 1.3
+        
+        # If no positive edge, immediate ruin
+        if weighted_edge <= 0:
+            return 100.0
+        
+        # Average bet for calculating betting units
+        avg_bet = total_bet_amount
+        
+        # Number of betting units in bankroll  
+        betting_units = self.starting_bankroll / avg_bet
         
         # Risk of ruin formula: RoR = exp(-2 * edge * units / variance)
         if betting_units > 0:
-            exponent = -2 * self.edge * betting_units / variance_per_unit
+            exponent = -2 * weighted_edge * betting_units / avg_variance_per_unit
             
-            # Calculate risk of ruin with reasonable bounds
-            if exponent < -15:  # Very low risk, show minimum
-                ror = 0.1
-            elif exponent > 2:  # High risk scenario
-                ror = 99.9
-            else:
-                ror = math.exp(exponent) * 100
-                # Ensure minimum display for positive edge
-                ror = max(ror, 0.1)
+            # Remove artificial bounds - show actual calculated risk
+            ror = math.exp(exponent) * 100
         else:
             ror = 100.0
         
