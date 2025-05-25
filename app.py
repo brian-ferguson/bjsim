@@ -15,6 +15,9 @@ def main():
     st.title("♠️ Blackjack Card Counting Simulation Tool")
     st.markdown("**Analyze expected value, variance, and risk of ruin with Monte Carlo analysis**")
     
+    # Create placeholder for live calculations
+    live_stats_placeholder = st.empty()
+    
     # Sidebar for inputs
     st.sidebar.header("Table Rules Configuration")
     
@@ -577,6 +580,110 @@ def main():
                 st.error("⚠️ Negative edge - not recommended")
         
 
+
+    # Calculate live statistics if we have valid inputs
+    if penetration_options and len(st.session_state.betting_strategy) >= 2:
+        try:
+            # Create temporary calculator for live display
+            temp_table_rules = {
+                'penetration_deck': penetration_deck,
+                'dealer_hits_soft_17': dealer_hits_soft17,
+                'double_after_split': double_after_split,
+                'can_split_aces': can_split_aces,
+                'resplit_aces': resplit_aces,
+                'max_splits': max_splits,
+                'surrender_allowed': surrender_allowed
+            }
+            
+            temp_calculator = BlackjackCalculator(
+                num_decks=num_decks,
+                starting_bankroll=starting_bankroll,
+                hands_per_hour=hands_per_hour,
+                betting_strategy=st.session_state.betting_strategy,
+                table_rules=temp_table_rules
+            )
+            
+            # Calculate key metrics
+            hourly_ev = temp_calculator.calculate_hourly_ev()
+            hourly_std = temp_calculator.calculate_hourly_std()
+            risk_of_ruin = temp_calculator.calculate_risk_of_ruin(hours_played)
+            
+            # Calculate hours to break even (when EV = starting bankroll)
+            if hourly_ev > 0:
+                hours_to_breakeven = starting_bankroll / hourly_ev
+            else:
+                hours_to_breakeven = float('inf')
+            
+            # Display live statistics
+            with live_stats_placeholder.container():
+                st.markdown("### 📊 Live Strategy Analysis")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric(
+                        label="Expected Value/Hour",
+                        value=f"${hourly_ev:.2f}",
+                        delta=f"{temp_calculator.edge*100:.2f}% edge"
+                    )
+                
+                with col2:
+                    st.metric(
+                        label="Standard Deviation/Hour", 
+                        value=f"${hourly_std:.2f}",
+                        delta=f"±{hourly_std/hourly_ev:.1f}x EV" if hourly_ev > 0 else None
+                    )
+                
+                with col3:
+                    if risk_of_ruin < 100:
+                        color = "🟢" if risk_of_ruin < 5 else "🟡" if risk_of_ruin < 15 else "🔴"
+                        st.metric(
+                            label="Risk of Ruin",
+                            value=f"{risk_of_ruin:.1f}%",
+                            delta=f"{color} {hours_played}h play"
+                        )
+                    else:
+                        st.metric(
+                            label="Risk of Ruin",
+                            value="High",
+                            delta="⚠️ Reconsider strategy"
+                        )
+                
+                with col4:
+                    if hours_to_breakeven != float('inf'):
+                        if hours_to_breakeven <= 8760:  # 1 year
+                            st.metric(
+                                label="Hours to 2x Bankroll",
+                                value=f"{hours_to_breakeven:.0f}h",
+                                delta=f"{hours_to_breakeven/24:.1f} days"
+                            )
+                        else:
+                            st.metric(
+                                label="Hours to 2x Bankroll", 
+                                value=">1 year",
+                                delta="💰 Long term"
+                            )
+                    else:
+                        st.metric(
+                            label="Hours to 2x Bankroll",
+                            value="Never",
+                            delta="📉 Negative EV"
+                        )
+                
+                # Show data source
+                if penetration_deck == num_decks:
+                    csv_filename = f"{num_decks}decks-nopenetration.csv"
+                else:
+                    csv_filename = f"{num_decks}decks-{penetration_deck}penetration.csv"
+                
+                st.caption(f"📁 Using data from: {csv_filename}")
+        
+        except Exception as e:
+            with live_stats_placeholder.container():
+                st.info("💡 Configure your betting strategy to see live analysis")
+    else:
+        with live_stats_placeholder.container():
+            st.info("💡 Complete your betting strategy to see live analysis")
 
     # Information section - will be updated after calculator is created  
     st.sidebar.markdown("---")
