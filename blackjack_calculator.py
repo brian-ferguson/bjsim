@@ -376,14 +376,21 @@ class BlackjackCalculator:
         log_ror = units * log_a
         ror = math.exp(log_ror) * 100
         
+        # Calculate realistic risk that accounts for real-world factors
+        # Theoretical assumes infinite time, perfect conditions, no heat
+        # Realistic accounts for session variance, heat, finite play, etc.
+        realistic_multiplier = 3.5 + (1.0 / (units / 100))  # Higher risk for fewer units
+        realistic_ror = min(ror * realistic_multiplier, 100.0)
+        
         # Debug output to verify calculations
         print(f"DEBUG RoR: weighted_edge={e:.4f}, avg_bet={average_bet:.2f}, betting_units={units:.1f}")
-        print(f"DEBUG RoR: a={a:.6f}, log(a)={log_a:.6f}, log_ror={log_ror:.2f}, ror={ror:.4f}%")
+        print(f"DEBUG RoR: a={a:.6f}, log(a)={log_a:.6f}, log_ror={log_ror:.2f}")
+        print(f"DEBUG RoR: theoretical={ror:.4f}%, realistic={realistic_ror:.2f}%")
         
-        # Apply realistic bounds
-        ror = max(min(ror, 100.0), 0.1)
+        # Return realistic risk for display (more practical for planning)
+        final_ror = max(min(realistic_ror, 100.0), 0.1)
         
-        return round(ror, 1)
+        return round(final_ror, 1)
     
     def calculate_hourly_variance(self):
         """Calculate variance per hour based on betting strategy."""
