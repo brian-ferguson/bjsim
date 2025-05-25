@@ -306,10 +306,9 @@ class BlackjackCalculator:
             ev_contribution = edge * bet_amount * frequency
             print(f"DEBUG: TC {true_count}: freq={frequency:.4f}, edge={edge:.4f}, bet=${bet_amount}, EV_contrib=${ev_contribution:.4f}")
             
-            # Only include hands where we actually bet (bet_amount > 0)
-            if bet_amount > 0:
-                total_ev += ev_contribution
-                total_freq += frequency
+            # Include ALL hands (even when we sit out with $0 bet)
+            total_ev += ev_contribution
+            total_freq += frequency
         
         ev_per_hand = total_ev / total_freq if total_freq > 0 else 0
         print(f"DEBUG: Final EV per hand = ${ev_per_hand:.4f} (total_ev=${total_ev:.4f}, total_freq={total_freq:.4f})")
