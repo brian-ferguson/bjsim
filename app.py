@@ -229,46 +229,31 @@ def main():
             table_rules=table_rules
         )
         
-        # Display table rules summary in tabs
-        st.header("🎲 Table Rules Configuration")
+        # Display table rules summary
+        st.header("🎲 Table Rules")
         
-        # Create tabs for table rules organization
-        rules_tab1, rules_tab2, rules_tab3 = st.tabs(["🎰 Game Setup", "👤 Player Options", "📊 Data Source"])
+        col1, col2 = st.columns(2)
         
-        with rules_tab1:
-            st.subheader("Basic Game Configuration")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Number of Decks", f"{num_decks}")
-                st.metric("Penetration", f"{penetration_deck} decks ({(penetration_deck/num_decks)*100:.1f}%)")
-            with col2:
-                st.metric("Dealer on Soft 17", "Hits" if dealer_hits_soft17 else "Stands")
-                st.metric("Hands per Hour", f"{hands_per_hour}")
-        
-        with rules_tab2:
-            st.subheader("Available Player Actions")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"✅ **Double after split:** {'Yes' if double_after_split else 'No'}")
-                st.write(f"✅ **Split aces:** {'Yes' if can_split_aces else 'No'}")
-                if can_split_aces:
-                    st.write(f"✅ **Resplit aces:** {'Yes' if resplit_aces else 'No'}")
-            with col2:
-                st.write(f"✅ **Max split hands:** {max_splits}")
-                st.write(f"✅ **Late surrender:** {'Yes' if surrender_allowed else 'No'}")
-        
-        with rules_tab3:
-            st.subheader("Simulation Data Source")
+        with col1:
+            st.write("**Rules:**")
+            st.write("• Dealer stands on soft 17" if not dealer_hits_soft17 else "• Dealer hits soft 17")
+            st.write("• Double after split allowed" if double_after_split else "• No double after split")
+            st.write("• Blackjack pays 3:2")
+            st.write("• Surrender allowed" if surrender_allowed else "• No surrender")
+            st.write("• Insurance available")
+            
+        with col2:
+            st.write("**Player Options:**")
+            st.write("• Double down on any two cards")
+            st.write(f"• Split pairs up to {max_splits} hands")
+            st.write("• Split aces allowed" if can_split_aces else "• No splitting aces")
             # Show which simulation data is being used
             if penetration_deck == num_decks:
                 csv_file = f"{num_decks}decks-nopenetration.csv"
             else:
                 csv_file = f"{num_decks}decks-{penetration_deck}penetration.csv"
-            
-            st.write(f"**File:** {csv_file}")
-            st.write("**Source:** Real simulation data from 1M+ shoes")
-            st.write("**Method:** Professional blackjack simulation using High-Low counting system")
-            st.info("💡 This data represents actual true count frequencies from comprehensive blackjack simulations, ensuring accurate edge calculations.")
+            st.write(f"• Count data: {csv_file}")
+            st.write("• Hi-Lo counting system")
         
         # Display calculation results
         st.header("📊 Simulation Results")
@@ -525,11 +510,8 @@ def main():
         
         if avg_trajectory and len(avg_trajectory) > 0:
             avg_profit = avg_trajectory[-1] - starting_bankroll
-            # Debug: ensure we have valid trajectory data
-            st.write(f"Debug: Average trajectory has {len(avg_trajectory)} data points")
         else:
             avg_profit = 0
-            st.warning("No average trajectory data available for comparison graph")
         
         col1, col2 = st.columns(2)
         with col1:
