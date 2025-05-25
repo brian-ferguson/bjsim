@@ -42,11 +42,14 @@ def main():
             if "nopenetration" in filename:
                 penetrations.append((num_decks, f"{num_decks} decks (100% - No penetration)"))
             else:
-                # Extract penetration value from filename like "6decks-5.75penetration.csv"
+                # Extract penetration value from filename like "1decks-0.75penetration.csv"
                 pen_part = filename.split('-')[1].replace('penetration.csv', '')
-                pen_value = float(pen_part)
-                percentage = (pen_value / num_decks) * 100
-                penetrations.append((pen_value, f"{pen_value} decks ({percentage:.1f}%)"))
+                try:
+                    pen_value = float(pen_part)
+                    percentage = (pen_value / num_decks) * 100
+                    penetrations.append((pen_value, f"{pen_value} decks ({percentage:.1f}%)"))
+                except ValueError:
+                    continue
         
         # Sort by penetration value (descending for best first)
         penetrations.sort(key=lambda x: x[0], reverse=True)
