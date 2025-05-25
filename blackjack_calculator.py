@@ -361,17 +361,19 @@ class BlackjackCalculator:
         # Higher variance for strategies with bet spreads due to more aggressive play at high counts
         empirical_variance = 1.6  # More realistic than 1.3 for modern games with full basic strategy
         
-        # Use stable log-based gambler's ruin formula to avoid underflow
-        # RoR = ((1 - edge/variance) / (1 + edge/variance))^betting_units
-        a = (1 - weighted_edge / empirical_variance) / (1 + weighted_edge / empirical_variance)
-        ror = (a ** betting_units) * 100
+        # Stable RoR formula using the mathematically correct approach
+        e = weighted_edge
+        v = empirical_variance
+        units = betting_units
+        
+        a = (1 - e / v) / (1 + e / v)
+        ror = (a ** units) * 100
         
         # Debug output to verify calculations
-        print(f"DEBUG RoR: weighted_edge={weighted_edge:.4f}, avg_bet={average_bet:.2f}, betting_units={betting_units:.1f}, raw_ror={ror:.2f}%")
+        print(f"DEBUG RoR: e={e:.4f}, v={v}, units={units:.1f}, a={a:.6f}, raw_ror={ror:.4f}%")
         
-        # Clamp to realistic range - never 0% for positive edge scenarios
-        ror = min(ror, 100.0)
-        ror = max(ror, 0.1)  # Minimum 0.1% risk for realistic scenarios
+        # Apply realistic bounds
+        ror = max(min(ror, 100.0), 0.1)
         
         return round(ror, 1)
     
