@@ -520,8 +520,11 @@ def main():
         # Average trajectory analysis
         st.subheader("Average Performance vs Expected")
         
-        # Calculate expected profit for comparison
-        total_ev = calculator.calculate_hourly_ev() * hours_played
+        # Calculate expected profit using the same method as simulation
+        # This accounts for sitting out negative counts properly
+        ev_per_hand = calculator._calculate_ev_per_hand()
+        total_hands = hours_played * calculator.hands_per_hour
+        total_ev = ev_per_hand * total_hands
         
         # Use the actual mean profit from Monte Carlo simulation results
         avg_profit = monte_carlo_results['statistics']['mean_profit']
