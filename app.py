@@ -229,33 +229,46 @@ def main():
             table_rules=table_rules
         )
         
-        # Display table rules summary
+        # Display table rules summary in tabs
         st.header("🎲 Table Rules Configuration")
         
-        col1, col2 = st.columns(2)
+        # Create tabs for table rules organization
+        rules_tab1, rules_tab2, rules_tab3 = st.tabs(["🎰 Game Setup", "👤 Player Options", "📊 Data Source"])
         
-        with col1:
-            st.write("**Game Setup:**")
-            st.write(f"• {num_decks} deck shoe")
-            st.write(f"• {penetration_deck} deck penetration ({(penetration_deck/num_decks)*100:.1f}%)")
-            st.write(f"• Dealer {'hits' if dealer_hits_soft17 else 'stands'} on soft 17")
-            
+        with rules_tab1:
+            st.subheader("Basic Game Configuration")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Number of Decks", f"{num_decks}")
+                st.metric("Penetration", f"{penetration_deck} decks ({(penetration_deck/num_decks)*100:.1f}%)")
+            with col2:
+                st.metric("Dealer on Soft 17", "Hits" if dealer_hits_soft17 else "Stands")
+                st.metric("Hands per Hour", f"{hands_per_hour}")
+        
+        with rules_tab2:
+            st.subheader("Available Player Actions")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"✅ **Double after split:** {'Yes' if double_after_split else 'No'}")
+                st.write(f"✅ **Split aces:** {'Yes' if can_split_aces else 'No'}")
+                if can_split_aces:
+                    st.write(f"✅ **Resplit aces:** {'Yes' if resplit_aces else 'No'}")
+            with col2:
+                st.write(f"✅ **Max split hands:** {max_splits}")
+                st.write(f"✅ **Late surrender:** {'Yes' if surrender_allowed else 'No'}")
+        
+        with rules_tab3:
+            st.subheader("Simulation Data Source")
             # Show which simulation data is being used
             if penetration_deck == num_decks:
                 csv_file = f"{num_decks}decks-nopenetration.csv"
             else:
                 csv_file = f"{num_decks}decks-{penetration_deck}penetration.csv"
-            st.write(f"• **Data Source**: {csv_file}")
-            st.caption("Using real simulation data from 1M+ shoes")
             
-        with col2:
-            st.write("**Player Options:**")
-            st.write(f"• Double after split: {'Yes' if double_after_split else 'No'}")
-            st.write(f"• Split aces: {'Yes' if can_split_aces else 'No'}")
-            if can_split_aces:
-                st.write(f"• Resplit aces: {'Yes' if resplit_aces else 'No'}")
-            st.write(f"• Max split hands: {max_splits}")
-            st.write(f"• Late surrender: {'Yes' if surrender_allowed else 'No'}")
+            st.write(f"**File:** {csv_file}")
+            st.write("**Source:** Real simulation data from 1M+ shoes")
+            st.write("**Method:** Professional blackjack simulation using High-Low counting system")
+            st.info("💡 This data represents actual true count frequencies from comprehensive blackjack simulations, ensuring accurate edge calculations.")
         
         # Display calculation results
         st.header("📊 Simulation Results")
@@ -346,7 +359,7 @@ def main():
         # Expected value over time
         st.subheader("Expected Value Over Time")
         ev_fig = visualizer.plot_expected_value_over_time(
-            hours_played, hourly_ev, calculator.calculate_hourly_std()
+            hours_played, hourly_ev, calculator.calculate_hourly_std(), starting_bankroll
         )
         st.plotly_chart(ev_fig, use_container_width=True)
         
@@ -444,50 +457,65 @@ def main():
         # Second row with confidence interval
         st.metric("95% Confidence Interval", f"${confidence_interval_lower:.0f} to ${confidence_interval_upper:.0f}")
         
-        # Histogram of final bankrolls
-        st.subheader("Distribution of Final Bankrolls")
-        bankroll_fig = visualizer.plot_bankroll_distribution(monte_carlo_results)
-        st.plotly_chart(bankroll_fig, use_container_width=True)
+        # Create tabbed interface for simulation analysis
+        tab1, tab2, tab3 = st.tabs(["📊 Distribution & Performance", "⚠️ Risk Analysis", "📈 Advanced Metrics"])
         
-        # Risk of Ruin for different bankrolls
-        st.subheader("Risk of Ruin Analysis")
+        with tab1:
+            # Histogram of final bankrolls
+            st.subheader("Distribution of Final Bankrolls")
+            bankroll_fig = visualizer.plot_bankroll_distribution(monte_carlo_results)
+            st.plotly_chart(bankroll_fig, use_container_width=True)
         
-        # Calculate RoR based on simulation results
-        ror_data = []
-        bankroll_percentages = [50, 75, 100, 125, 150]
-        current_bankroll = starting_bankroll
-        
-        for pct in bankroll_percentages:
-            test_bankroll = current_bankroll * pct / 100
-            # Calculate how many simulations would result in ruin at this bankroll level
-            adjusted_final_bankrolls = monte_carlo_results['final_bankrolls'] - current_bankroll + test_bankroll
-            ruin_count = np.sum(adjusted_final_bankrolls <= 0)
-            ror_percentage = (ruin_count / len(adjusted_final_bankrolls)) * 100
-            ror_data.append({"Bankroll Size": f"{pct}% of current", "Risk of Ruin": f"{ror_percentage:.1f}%"})
-        
-        # Display RoR table
-        ror_df = pd.DataFrame(ror_data)
-        st.table(ror_df)
-        
-        # Calculate N₀ (hands to be 1 SD above breakeven)
-        st.subheader("N₀ Analysis (Hands to 1 SD Above Breakeven)")
-        
-        ev_per_hand = calculator.calculate_hourly_ev() / calculator.hands_per_hour
-        variance_per_hand = (calculator.calculate_hourly_std() / calculator.hands_per_hour) ** 2
-        
-        if ev_per_hand > 0:
-            n0_hands = variance_per_hand / (ev_per_hand ** 2)
-            n0_hours = n0_hands / calculator.hands_per_hour
+        with tab2:
+            # Risk of Ruin for different bankrolls
+            st.subheader("Risk of Ruin Analysis")
+            st.write("Shows probability of losing your entire bankroll at different starting amounts:")
             
-            n0_col1, n0_col2 = st.columns(2)
-            with n0_col1:
-                st.metric("N₀ (Hands)", f"{n0_hands:,.0f}")
-            with n0_col2:
-                st.metric("N₀ (Hours)", f"{n0_hours:.1f}")
+            # Calculate RoR based on simulation results
+            ror_data = []
+            bankroll_percentages = [50, 75, 100, 125, 150]
+            current_bankroll = starting_bankroll
             
-            st.info(f"After {n0_hands:,.0f} hands ({n0_hours:.1f} hours), your expected profit will equal one standard deviation of variance. This is when skill begins to significantly outweigh luck.")
-        else:
-            st.error("Negative edge detected - N₀ calculation not applicable")
+            for pct in bankroll_percentages:
+                test_bankroll = current_bankroll * pct / 100
+                # Scale the simulation results proportionally to the test bankroll
+                scale_factor = test_bankroll / current_bankroll
+                scaled_final_bankrolls = monte_carlo_results['final_bankrolls'] * scale_factor
+                ruin_count = np.sum(scaled_final_bankrolls <= 0)
+                ror_percentage = (ruin_count / len(scaled_final_bankrolls)) * 100
+                ror_data.append({
+                    "Bankroll Size": f"{pct}% of current (${test_bankroll:,.0f})", 
+                    "Risk of Ruin": f"{ror_percentage:.1f}%"
+                })
+            
+            # Display RoR table
+            ror_df = pd.DataFrame(ror_data)
+            st.table(ror_df)
+            
+            # Add interpretation
+            st.info("💡 **Interpretation:** Lower percentages indicate safer bankroll levels. Professional players typically aim for risk of ruin below 5-10%.")
+        
+        with tab3:
+            # Calculate N₀ (hands to be 1 SD above breakeven)
+            st.subheader("N₀ Analysis (Hands to 1 SD Above Breakeven)")
+            
+            ev_per_hand = calculator.calculate_hourly_ev() / calculator.hands_per_hour
+            std_per_hand = calculator.calculate_hourly_std() / np.sqrt(calculator.hands_per_hour)
+            variance_per_hand = std_per_hand ** 2
+            
+            if ev_per_hand > 0 and variance_per_hand > 0:
+                n0_hands = variance_per_hand / (ev_per_hand ** 2)
+                n0_hours = n0_hands / calculator.hands_per_hour
+                
+                n0_col1, n0_col2 = st.columns(2)
+                with n0_col1:
+                    st.metric("N₀ (Hands)", f"{n0_hands:,.0f}")
+                with n0_col2:
+                    st.metric("N₀ (Hours)", f"{n0_hours:.1f}")
+                
+                st.info(f"After {n0_hands:,.0f} hands ({n0_hours:.1f} hours), your expected profit will equal one standard deviation of variance. This is when skill begins to significantly outweigh luck.")
+            else:
+                st.error("Negative edge detected - N₀ calculation not applicable")
         
         # Average trajectory analysis
         st.subheader("Average Performance vs Expected")
@@ -495,10 +523,13 @@ def main():
         # Use the pre-calculated average trajectory from Monte Carlo results
         avg_trajectory = monte_carlo_results.get('avg_trajectory', [])
         
-        if avg_trajectory:
+        if avg_trajectory and len(avg_trajectory) > 0:
             avg_profit = avg_trajectory[-1] - starting_bankroll
+            # Debug: ensure we have valid trajectory data
+            st.write(f"Debug: Average trajectory has {len(avg_trajectory)} data points")
         else:
             avg_profit = 0
+            st.warning("No average trajectory data available for comparison graph")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -557,6 +588,7 @@ def main():
         
         with risk_col2:
             st.write("**Bankroll Adequacy:**")
+            recommended_bankroll = calculator.calculate_recommended_bankroll()
             if recommended_bankroll != float('inf'):
                 bankroll_adequacy = (starting_bankroll / recommended_bankroll) * 100
                 st.write(f"- Recommended: ${recommended_bankroll:.2f}")
@@ -592,9 +624,11 @@ def main():
                 table_rules=temp_table_rules
             )
             
-            # Calculate key metrics
+            # Calculate key metrics using current sidebar values
             hourly_ev = temp_calculator.calculate_hourly_ev()
             hourly_std = temp_calculator.calculate_hourly_std()
+            
+            # Use the actual hours_played from sidebar
             risk_of_ruin = temp_calculator.calculate_risk_of_ruin(hours_played)
             
             # Calculate hours to break even (when EV = starting bankroll)
