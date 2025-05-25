@@ -49,8 +49,8 @@ class BlackjackCalculator:
         # Standard blackjack statistics  
         self.std_dev_per_hand = 0.95  # Standard deviation per unit bet (realistic for skilled play)
         
-        # True count frequencies based on table rules and penetration
-        self.count_frequencies = self._get_count_frequencies_for_rules()
+        # True count frequencies from CSV data
+        self.count_frequencies = self._load_count_frequencies_from_csv()
         
         # Calculate edge for each true count
         self.count_edges = self._calculate_count_edges()
@@ -95,49 +95,62 @@ class BlackjackCalculator:
         
         return max(base_edge, 0.001)  # Minimum 0.1% house edge
     
-    def _get_count_frequencies_for_rules(self):
+    def _load_count_frequencies_from_csv(self):
         """
-        Get true count frequencies based on table rules and penetration.
-        Based on simulation studies from Schlesinger and Wattenberger.
+        Load true count frequencies from CSV simulation data.
         """
-        penetration = self.game_rules['penetration']
+        import os
+        import csv
         
-        # Base frequencies for 75% penetration, 6-deck game
-        if penetration >= 0.80:  # Deep penetration (80%+)
-            frequencies = {
-                -3: 0.08, -2: 0.12, -1: 0.18, 0: 0.22, 1: 0.18,
-                2: 0.12, 3: 0.06, 4: 0.025, 5: 0.015, 6: 0.005
-            }
-        elif penetration >= 0.70:  # Good penetration (70-80%)
-            frequencies = {
-                -3: 0.12, -2: 0.15, -1: 0.20, 0: 0.24, 1: 0.16,
-                2: 0.09, 3: 0.03, 4: 0.01, 5: 0.003, 6: 0.001
-            }
-        else:  # Poor penetration (<70%)
-            frequencies = {
-                -3: 0.15, -2: 0.18, -1: 0.22, 0: 0.26, 1: 0.12,
-                2: 0.06, 3: 0.02, 4: 0.005, 5: 0.002, 6: 0.001
-            }
+        # Determine the correct CSV file based on deck count and penetration
+        penetration_deck = self.table_rules['penetration_deck']
         
-        # Adjust for number of decks
-        if self.num_decks <= 2:
-            # Single/double deck: more extreme counts
-            for tc in frequencies:
-                if abs(tc) >= 2:
-                    frequencies[tc] *= 1.3
-                else:
-                    frequencies[tc] *= 0.9
-        elif self.num_decks >= 8:
-            # 8-deck: fewer extreme counts
-            for tc in frequencies:
-                if abs(tc) >= 2:
-                    frequencies[tc] *= 0.7
-                else:
-                    frequencies[tc] *= 1.1
+        if penetration_deck == self.num_decks:
+            # No penetration case
+            filename = f"true count distributions/{self.num_decks}decks-nopenetration.csv"
+        else:
+            # Specific penetration
+            filename = f"true count distributions/{self.num_decks}decks-{penetration_deck}penetration.csv"
         
-        # Normalize to ensure they sum to 1.0
-        total = sum(frequencies.values())
-        return {tc: freq/total for tc, freq in frequencies.items()}
+        frequencies = {}
+        
+        if os.path.exists(filename):
+            try:
+                with open(filename, 'r') as file:
+                    reader = csv.reader(file)
+                    for row in reader:
+                        # Skip comment lines and headers
+                        if row and not row[0].startswith('#') and row[0] != 'True Count':
+                            try:
+                                true_count = int(row[0])
+                                percentage = float(row[1])
+                                # Convert percentage to frequency (divide by 100)
+                                frequencies[true_count] = percentage / 100.0
+                            except (ValueError, IndexError):
+                                continue
+                
+                # Filter to our range of interest (-3 to +6)
+                filtered_frequencies = {}
+                for tc in range(-3, 7):
+                    if tc in frequencies:
+                        filtered_frequencies[tc] = frequencies[tc]
+                    else:
+                        # Use a small default value for missing counts
+                        filtered_frequencies[tc] = 0.001
+                
+                # Normalize to ensure they sum to 1.0
+                total = sum(filtered_frequencies.values())
+                if total > 0:
+                    return {tc: freq/total for tc, freq in filtered_frequencies.items()}
+                    
+            except Exception as e:
+                print(f"Error loading CSV {filename}: {e}")
+        
+        # Fallback to default frequencies if CSV loading fails
+        return {
+            -3: 0.12, -2: 0.15, -1: 0.20, 0: 0.24, 1: 0.16,
+            2: 0.09, 3: 0.03, 4: 0.01, 5: 0.003, 6: 0.001
+        }
     
     def _calculate_count_edges(self):
         """

@@ -27,19 +27,44 @@ def main():
         help="Standard casinos use 6-deck shoes"
     )
     
-    # Deck penetration
-    penetration_options = []
-    for i in range(1, num_decks + 1):
-        percentage = (i / num_decks) * 100
-        penetration_options.append((i, f"{i} deck{'' if i == 1 else 's'} ({percentage:.0f}%)"))
+    # Get available penetration options from CSV files
+    def get_available_penetrations(num_decks):
+        import os
+        import glob
+        
+        # Look for CSV files matching the deck count
+        pattern = f"true count distributions/{num_decks}decks-*.csv"
+        files = glob.glob(pattern)
+        
+        penetrations = []
+        for file in files:
+            filename = os.path.basename(file)
+            if "nopenetration" in filename:
+                penetrations.append((num_decks, f"{num_decks} decks (100% - No penetration)"))
+            else:
+                # Extract penetration value from filename like "6decks-5.75penetration.csv"
+                pen_part = filename.split('-')[1].replace('penetration.csv', '')
+                pen_value = float(pen_part)
+                percentage = (pen_value / num_decks) * 100
+                penetrations.append((pen_value, f"{pen_value} decks ({percentage:.1f}%)"))
+        
+        # Sort by penetration value (descending for best first)
+        penetrations.sort(key=lambda x: x[0], reverse=True)
+        return penetrations
     
-    penetration_deck, penetration_label = st.sidebar.selectbox(
-        "Deck Penetration",
-        options=penetration_options,
-        index=len(penetration_options)-2 if len(penetration_options) > 1 else 0,
-        format_func=lambda x: x[1],
-        help="How many decks are dealt before shuffle"
-    )
+    penetration_options = get_available_penetrations(num_decks)
+    
+    if penetration_options:
+        penetration_deck, penetration_label = st.sidebar.selectbox(
+            "Deck Penetration",
+            options=penetration_options,
+            index=0,  # Default to best penetration
+            format_func=lambda x: x[1],
+            help="How many decks are dealt before shuffle (based on available simulation data)"
+        )
+    else:
+        st.sidebar.error(f"No penetration data available for {num_decks} decks")
+        penetration_deck = num_decks
     
     # Dealer rules
     dealer_hits_soft17 = st.sidebar.selectbox(
@@ -199,8 +224,16 @@ def main():
         with col1:
             st.write("**Game Setup:**")
             st.write(f"• {num_decks} deck shoe")
-            st.write(f"• {penetration_deck} deck penetration ({(penetration_deck/num_decks)*100:.0f}%)")
+            st.write(f"• {penetration_deck} deck penetration ({(penetration_deck/num_decks)*100:.1f}%)")
             st.write(f"• Dealer {'hits' if dealer_hits_soft17 else 'stands'} on soft 17")
+            
+            # Show which simulation data is being used
+            if penetration_deck == num_decks:
+                csv_file = f"{num_decks}decks-nopenetration.csv"
+            else:
+                csv_file = f"{num_decks}decks-{penetration_deck}penetration.csv"
+            st.write(f"• **Data Source**: {csv_file}")
+            st.caption("Using real simulation data from 1M+ shoes")
             
         with col2:
             st.write("**Player Options:**")
