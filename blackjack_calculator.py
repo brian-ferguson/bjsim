@@ -339,63 +339,44 @@ class BlackjackCalculator:
     
     def calculate_risk_of_ruin(self, hours_played):
         """
-        Calculate risk of ruin using realistic variance and edge calculations.
-        Accounts for bet spread, actual variance, and session length.
+        Calculate risk of ruin using actual betting strategy and count frequencies.
+        Uses the precise bet amounts and frequencies from our data.
         """
         if self.edge <= 0:
             return 100.0  # Certain ruin with no edge
         
-        # Calculate actual variance based on betting strategy
-        total_variance_weighted = 0
-        total_frequency_weighted = 0
-        min_bet = float('inf')
-        max_bet = 0
-        
-        # Calculate bet spread and weighted variance
-        for true_count, frequency in self.count_frequencies.items():
-            bet_amount = self._get_bet_for_count(true_count)
-            if bet_amount > 0:
-                min_bet = min(min_bet, bet_amount)
-                max_bet = max(max_bet, bet_amount)
-                
-                # Variance per hand = (base variance) * (bet size squared)
-                # Using 1.3 as base blackjack variance, but scaled by bet volatility
-                hand_variance = 1.3 * (bet_amount ** 2)
-                total_variance_weighted += frequency * hand_variance
-                total_frequency_weighted += frequency
-        
-        if total_frequency_weighted == 0:
-            return 100.0
-            
-        # Calculate effective variance per unit bet
+        # Calculate average bet and variance using actual strategy
         avg_bet = self._calculate_average_bet()
         if avg_bet <= 0:
             return 100.0
-            
-        # Adjust variance for bet spread - higher spreads = higher variance
-        bet_spread_ratio = max_bet / min_bet if min_bet > 0 else 1
-        spread_multiplier = 1 + (bet_spread_ratio - 1) * 0.3  # Conservative spread impact
         
-        effective_variance = (total_variance_weighted / total_frequency_weighted) / (avg_bet ** 2)
-        effective_variance *= spread_multiplier
+        # Calculate weighted variance per dollar bet
+        total_weighted_variance = 0
+        total_weighted_frequency = 0
+        
+        for true_count, frequency in self.count_frequencies.items():
+            bet_amount = self._get_bet_for_count(true_count)
+            if bet_amount > 0:
+                # Standard blackjack variance is ~1.3 per hand
+                # Scale by frequency of this count occurring
+                hand_variance = 1.3 * frequency
+                total_weighted_variance += hand_variance
+                total_weighted_frequency += frequency
+        
+        if total_weighted_frequency == 0:
+            return 100.0
+        
+        # Variance per average dollar bet
+        variance_per_unit = total_weighted_variance / total_weighted_frequency
         
         # Number of betting units in bankroll
         betting_units = self.starting_bankroll / avg_bet
         
-        # Calculate edge per unit bet
-        edge_per_unit = self.edge
-        
-        # Session-based adjustment for finite play
-        total_hands = hours_played * self.hands_per_hour
-        if total_hands < 10000:  # Short session adjustment
-            # Shorter sessions increase risk due to insufficient law of large numbers
-            session_adjustment = max(1.0, math.sqrt(10000 / total_hands))
-            effective_variance *= session_adjustment
-        
-        # Risk of ruin formula with realistic variance
-        if betting_units > 0 and effective_variance > 0:
-            exponent = -2 * edge_per_unit * betting_units / effective_variance
-            # Clamp exponent to prevent overflow/underflow
+        # Standard risk of ruin formula for advantage play
+        # RoR = exp(-2 * edge * units / variance)
+        if betting_units > 0 and variance_per_unit > 0:
+            exponent = -2 * self.edge * betting_units / variance_per_unit
+            # Prevent numerical overflow/underflow
             exponent = max(min(exponent, 50), -50)
             ror = math.exp(exponent) * 100
         else:
