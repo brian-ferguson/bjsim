@@ -467,26 +467,45 @@ def main():
             st.plotly_chart(bankroll_fig, use_container_width=True)
         
         with tab2:
-            # Risk of Ruin for different bankrolls
-            st.subheader("Risk of Ruin Analysis")
-            st.write("Shows probability of losing your entire bankroll at different starting amounts:")
+            # Profit/Loss Distribution
+            st.subheader("Profit/Loss Distribution")
             
-            # Calculate RoR based on simulation results
-            ror_data = []
-            bankroll_percentages = [50, 75, 100, 125, 150]
-            current_bankroll = starting_bankroll
+            # Calculate profit/loss statistics
+            final_profits = np.array(monte_carlo_results['final_bankrolls']) - starting_bankroll
+            profitable_count = np.sum(final_profits > 0)
+            breakeven_count = np.sum(final_profits == 0)
+            loss_count = np.sum(final_profits < 0)
+            total_sims = len(final_profits)
             
-            for pct in bankroll_percentages:
-                test_bankroll = current_bankroll * pct / 100
-                # Scale the simulation results proportionally to the test bankroll
-                scale_factor = test_bankroll / current_bankroll
-                scaled_final_bankrolls = monte_carlo_results['final_bankrolls'] * scale_factor
-                ruin_count = np.sum(scaled_final_bankrolls <= 0)
-                ror_percentage = (ruin_count / len(scaled_final_bankrolls)) * 100
-                ror_data.append({
-                    "Bankroll Size": f"{pct}% of current (${test_bankroll:,.0f})", 
-                    "Risk of Ruin": f"{ror_percentage:.1f}%"
-                })
+            # Display profit/loss breakdown
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                profit_pct = (profitable_count / total_sims) * 100
+                st.metric("Players in Profit", f"{profit_pct:.1f}%", 
+                         help=f"{profitable_count:,} out of {total_sims:,} simulations")
+            with col2:
+                loss_pct = (loss_count / total_sims) * 100
+                st.metric("Players with Losses", f"{loss_pct:.1f}%",
+                         help=f"{loss_count:,} out of {total_sims:,} simulations")
+            with col3:
+                ruin_count = np.sum(monte_carlo_results['final_bankrolls'] <= 0)
+                ruin_pct = (ruin_count / total_sims) * 100
+                st.metric("Risk of Ruin (Actual)", f"{ruin_pct:.2f}%",
+                         help=f"{ruin_count:,} simulations ended in ruin")
+            
+            # Profit ranges
+            st.write("**Profit Range Distribution:**")
+            ranges = [
+                ("Major Loss (< -50%)", np.sum(final_profits < -starting_bankroll * 0.5)),
+                ("Moderate Loss (-20% to -50%)", np.sum((final_profits >= -starting_bankroll * 0.5) & (final_profits < -starting_bankroll * 0.2))),
+                ("Small Loss (0% to -20%)", np.sum((final_profits >= -starting_bankroll * 0.2) & (final_profits < 0))),
+                ("Small Profit (0% to +50%)", np.sum((final_profits >= 0) & (final_profits < starting_bankroll * 0.5))),
+                ("Large Profit (50%+)", np.sum(final_profits >= starting_bankroll * 0.5))
+            ]
+            
+            for range_name, count in ranges:
+                percentage = (count / total_sims) * 100
+                st.write(f"• {range_name}: {percentage:.1f}% ({count:,} players)")
             
             # Display RoR table
             ror_df = pd.DataFrame(ror_data)
