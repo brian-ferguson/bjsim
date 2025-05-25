@@ -345,10 +345,11 @@ class BlackjackCalculator:
         if weighted_edge <= 0:
             return 100.0
         
-        # Calculate average bet per hand (including hands where we sit out)
-        # total_bet_amount is sum of (bet * frequency), we need to divide by total frequency
-        total_frequency = sum(self.count_frequencies.values())
-        average_bet = total_bet_amount / total_frequency if total_frequency > 0 else 0
+        # Calculate average bet per hand ONLY for hands where we actually bet
+        # This gives us the true average bet size for risk calculations
+        betting_hands_frequency = sum(frequency for tc, frequency in self.count_frequencies.items() 
+                                    if self._get_bet_for_count(tc) > 0)
+        average_bet = total_bet_amount / betting_hands_frequency if betting_hands_frequency > 0 else 0
         
         if average_bet <= 0:
             return 100.0
