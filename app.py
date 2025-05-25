@@ -278,9 +278,33 @@ def main():
                 st.write(f"- Insurance offered: {'Yes' if calculator.game_rules['insurance_offered'] else 'No'}")
                 st.write(f"- **Base house edge: {calculator.base_house_edge*100:.1f}%**")
 
-        # Debug: Show detailed edge breakdown
-        with st.expander("📊 Edge Calculation Breakdown"):
-            st.write("**Count Frequencies and Contributions:**")
+        # Show CSV data and calculations
+        with st.expander("📊 CSV Data & Edge Breakdown"):
+            # Show which CSV file is being used
+            if penetration_deck == num_decks:
+                csv_filename = f"{num_decks}decks-nopenetration.csv"
+            else:
+                csv_filename = f"{num_decks}decks-{penetration_deck}penetration.csv"
+            
+            st.write(f"**Data Source:** {csv_filename}")
+            st.write("**Raw CSV True Count Frequencies:**")
+            
+            # Display raw frequencies from CSV
+            csv_data = []
+            for tc in range(-3, 7):
+                frequency = calculator.count_frequencies.get(tc, 0)
+                csv_data.append(f"TC {tc:+d}: {frequency*100:.2f}%")
+            
+            # Show in columns for better layout
+            col1, col2 = st.columns(2)
+            with col1:
+                for i in range(0, 5):
+                    st.write(csv_data[i])
+            with col2:
+                for i in range(5, 10):
+                    st.write(csv_data[i])
+            
+            st.write("**Edge Calculations Using CSV Data:**")
             total_weighted_edge = 0
             total_weighted_bet = 0
             
@@ -293,7 +317,7 @@ def main():
                 total_weighted_edge += contribution
                 total_weighted_bet += frequency * bet_amount
                 
-                st.write(f"TC {tc:+d}: {frequency*100:.1f}% frequency, {edge*100:.1f}% edge, ${bet_amount} bet → {contribution*100:.3f}% contribution")
+                st.write(f"TC {tc:+d}: {frequency*100:.2f}% freq × {edge*100:.1f}% edge × ${bet_amount} bet = {contribution*100:.3f}% contribution")
             
             st.write(f"**Total weighted edge: {total_weighted_edge:.6f}**")
             st.write(f"**Total weighted bet: {total_weighted_bet:.2f}**")
