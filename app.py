@@ -523,10 +523,13 @@ def main():
         # Use the pre-calculated average trajectory from Monte Carlo results
         avg_trajectory = monte_carlo_results.get('avg_trajectory', [])
         
-        if avg_trajectory:
+        if avg_trajectory and len(avg_trajectory) > 0:
             avg_profit = avg_trajectory[-1] - starting_bankroll
+            # Debug: ensure we have valid trajectory data
+            st.write(f"Debug: Average trajectory has {len(avg_trajectory)} data points")
         else:
             avg_profit = 0
+            st.warning("No average trajectory data available for comparison graph")
         
         col1, col2 = st.columns(2)
         with col1:
